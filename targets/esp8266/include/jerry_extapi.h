@@ -16,20 +16,51 @@
 #ifndef __JERRY_EXTAPI_H__
 #define __JERRY_EXTAPI_H__
 
-#define JERRY_STANDALONE_EXIT_CODE_OK   (0)
-#define JERRY_STANDALONE_EXIT_CODE_FAIL (1)
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <espressif/esp_common.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
+#include "jerryscript-core.h"
+#ifdef JERRY_DEBUGGER
+#include "jerryscript-debugger.h"
+#endif /* JERRY_DEBUGGER */
 
-#ifdef __cplusplus
-extern "C" {
+#include "esp_interfaces_js.h"
+
+#define DELCARE_HANDLER(NAME) \
+static jerry_value_t \
+NAME ## _handler (const jerry_value_t function_obj_val __attribute__((unused)), \
+                  const jerry_value_t this_val __attribute__((unused)), \
+                  const jerry_value_t args_p[], \
+                  const jerry_length_t args_cnt)
+
+#define TYPE_OBJECT "object"
+#define TYPE_NUMBER "number"
+#define TYPE_STRING "string"
+#define TYPE_TYPEDARRAY "typedArray"
+#define TYPE_BOOLEAN "boolean"
+#define TYPE_ARRAY "array"
+#define JERRY_STANDALONE_EXIT_CODE_OK 0
+#define JERRY_STANDALONE_EXIT_CODE_FAIL 1
+
+#if 0
+#include "jerryscript-port.h"
+#define DEBUG_LINE() \
+        do { jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "LINE: %d\n", __LINE__); } while (0)
+#else
+#define DEBUG_LINE() do { printf("LINE: %d\n", __LINE__); } while (0)
 #endif
 
-
-void js_register_functions (void);
-
-
-#ifdef __cplusplus
-}
-#endif
+void register_js_value_to_object ( char *name_p, jerry_value_t value, jerry_value_t object);
+void register_number_to_object (char *name_p, double number, jerry_value_t object);
+void register_string_to_object (char *name_p, char *string, jerry_value_t object);
+void register_boolean_to_object (char *name_p, bool boolean, jerry_value_t object);
+bool register_native_function (char* name, jerry_external_handler_t handler, jerry_value_t object);
+jerry_value_t raise_argument_count_error (char* object, char* property, char* expected_argument_count);
+jerry_value_t raise_argument_type_error (char* arg_count, char* type);
+void register_js_entries (void);
 
 #endif

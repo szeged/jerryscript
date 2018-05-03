@@ -15,39 +15,133 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include <espressif/esp_common.h>
+
+#ifdef JERRY_DEBUGGER
+#include "esp_sntp.h"
+#endif
 
 #include "jerry_extapi.h"
 #include "jerry_run.h"
+#include "jerry-targetjs.h"
 
 #include "jerryscript.h"
 #include "jerryscript-port.h"
 
 static const char* fn_sys_loop_name = "sysloop";
 
-void js_entry ()
+/**
+ * Js2C creates e.g. `main` from `main.js` so we convert it back
+ */
+static inline void revert_resource_name (const char* name, jerry_char_t* resource_name, jerry_size_t resource_name_length)
+{
+  union { double d; unsigned u; } now = { .d = jerry_port_get_current_time () };
+  srand (now.u);
+  strncpy ((char*) resource_name, name, resource_name_length);
+  resource_name[resource_name_length + 2] = 's';
+  resource_name[resource_name_length + 1] = 'j';
+  resource_name[resource_name_length] = '.';
+} /* revert_resource_name */
+
+/**
+ * Print the failing script name
+ */
+static void jerry_parse_failed (const char* name)
+{
+  jerry_size_t resource_name_length = strlen (name);
+  jerry_char_t resource_name[resource_name_length + 3];
+
+  revert_resource_name (name, resource_name, resource_name_length);
+
+  jerry_port_log (JERRY_LOG_LEVEL_ERROR, "Script parsing failed in %s\n", resource_name);
+} /* jerry_parse_failed */
+
+/**
+ * Initialize the engine and parse the given sources
+ * Return true - if all script parsing was succesful
+ *        fasle - otherwise
+ */
+bool jerry_task_init (void)
 {
   srand ((unsigned) jerry_port_get_current_time ());
-
+  DECLARE_JS_CODES;
   jerry_init (JERRY_INIT_EMPTY);
-  js_register_functions ();
-}
 
-int js_eval (const char *source_p, const size_t source_size)
+  register_js_entries ();
+
+#ifdef JERRY_DEBUGGER
+  while (sdk_wifi_station_get_connect_status () != STATION_GOT_IP)
+  {
+    vTaskDelay (1000 / portTICK_PERIOD_MS);
+  }
+
+  if (!sntp_been_init())
+  {
+    init_esp_sntp ();
+  }
+
+  jerry_debugger_init (5001);
+#endif
+
+  /* run rest of the js files first */
+  for (int idx = 1; js_codes[idx].source; idx++)
+  {
+    if (!parse_resource (js_codes[idx].name, js_codes[idx].source, js_codes[idx].length))
+    {
+      jerry_parse_failed (js_codes[idx].name);
+      return false;
+    }
+  }
+
+  /* run main.js */
+  if (!parse_resource (js_codes[0].name, js_codes[0].source, js_codes[0].length))
+  {
+    jerry_parse_failed (js_codes[0].name);
+    return false;
+  }
+
+  return true;
+} /* jerry_task_init */
+
+/**
+ * Parse and run the given sources
+ * Return true - if parsing and run was succesful
+ *        fasle - otherwise
+ */
+bool parse_resource (const char *name, const char *source, const int length)
 {
-  jerry_value_t res = jerry_eval ((jerry_char_t *) source_p,
-                                  source_size,
-                                  JERRY_PARSE_NO_OPTS);
-  if (jerry_value_is_error (res)) {
-    jerry_release_value (res);
-    return -1;
+  jerry_size_t resource_name_length = strlen (name);
+  jerry_char_t resource_name[resource_name_length + 3];
+
+  revert_resource_name (name, resource_name, resource_name_length);
+
+  jerry_value_t res = jerry_parse (resource_name,
+                                  resource_name_length + 3,
+                                  (jerry_char_t *) source,
+                                  length,
+                                  false);
+
+  if (!jerry_value_is_error (res))
+  {
+    jerry_value_t func_val = res;
+    res = jerry_run (func_val);
+    jerry_release_value (func_val);
   }
 
   jerry_release_value (res);
 
-  return 0;
-}
+  return true;
+} /* parse_resource */
 
-int js_loop (uint32_t ticknow)
+/**
+ * Call sysloop function
+ * Return true - if the function call was succesfull
+ *        fasle - otherwise
+ */
+bool js_loop (uint32_t ticknow)
 {
   jerry_value_t global_obj_val = jerry_get_global_object ();
   jerry_value_t prop_name_val = jerry_create_string ((const jerry_char_t *) fn_sys_loop_name);
@@ -58,17 +152,22 @@ int js_loop (uint32_t ticknow)
     printf ("Error: '%s' not defined!!!\r\n", fn_sys_loop_name);
     jerry_release_value (sysloop_func);
     jerry_release_value (global_obj_val);
-    return -1;
+    return false;
   }
 
-  if (!jerry_value_is_function (sysloop_func)) {
+  if (!jerry_value_is_function (sysloop_func))
+  {
     printf ("Error: '%s' is not a function!!!\r\n", fn_sys_loop_name);
     jerry_release_value (sysloop_func);
     jerry_release_value (global_obj_val);
-    return -2;
+    return false;
   }
 
-  jerry_value_t val_args[] = { jerry_create_number (ticknow) };
+  jerry_value_t val_args[] =
+  {
+    jerry_create_number (ticknow)
+  };
+
   uint16_t val_argv = sizeof (val_args) / sizeof (jerry_value_t);
 
   jerry_value_t res = jerry_call_function (sysloop_func,
@@ -76,7 +175,8 @@ int js_loop (uint32_t ticknow)
                                            val_args,
                                            val_argv);
 
-  for (uint16_t i = 0; i < val_argv; i++) {
+  for (uint16_t i = 0; i < val_argv; i++)
+  {
     jerry_release_value (val_args[i]);
   }
 
@@ -85,15 +185,18 @@ int js_loop (uint32_t ticknow)
 
   if (jerry_value_is_error (res)) {
     jerry_release_value (res);
-    return -3;
+    return false;
   }
 
   jerry_release_value (res);
 
-  return 0;
-}
+  return true;
+} /* js_loop */
 
-void js_exit (void)
+/**
+ * Terminate the engine
+ */
+void jerry_task_exit (void)
 {
   jerry_cleanup ();
-}
+} /* jerry_task_exit */

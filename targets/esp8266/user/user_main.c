@@ -23,125 +23,188 @@
  * Modification history:
  *     2014/12/1, v1.0 create this file.
 *******************************************************************************/
-
-#include "esp_common.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "uart.h"
+#include <espressif/esp_common.h>
+#include <esp/uart.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#if REDIRECT_STDOUT == 1 || REDIRECT_STDOUT == 2
+#include <sys/reent.h>
+#include <semphr.h>
+#include <stdout_redirect.h>
+#include <espressif/esp8266/gpio_register.h>
+#include <espressif/esp8266/pin_mux_register.h>
+#endif
+#include <math.h>
+#include "fcntl.h"
+#include "unistd.h"
+#include "spiffs.h"
+#include "esp_spiffs.h"
 
 #include "user_config.h"
 #include "jerry_run.h"
-#include "jerry-targetjs.h"
 
-static void show_free_mem(int idx) {
-  size_t res = xPortGetFreeHeapSize();
-  printf("dbg free memory(%d): %d\r\n", idx, res);
-}
-
-static int jerry_task_init(void) {
-  DECLARE_JS_CODES;
-
-  js_entry();
-
-  /* run rest of the js files first */
-  show_free_mem(2);
-  for (int src = 1; js_codes[src].source; src++) {
-    int retcode = js_eval(js_codes[src].source, js_codes[src].length);
-    if (retcode != 0) {
-      printf("js_eval failed code(%d) [%s]\r\n", retcode, js_codes[src].name);
-      return -1;
-    }
-  }
-
-  /* run main.js */
-  int retcode = js_eval(js_codes[0].source, js_codes[0].length);
-  if (retcode != 0) {
-    printf("js_eval failed code(%d) [%s]\r\n", retcode, js_codes[0].name);
-    return -2;
-  }
-  show_free_mem(3);
-  return 0;
-}
-
-static void jerry_task(void *pvParameters) {
-  if (jerry_task_init() == 0) {
-    const portTickType xDelay = 100 / portTICK_RATE_MS;
+/**
+ * Start JerryScript in a task
+ */
+static void jerry_task (void *pvParameters)
+{
+  if (jerry_task_init ())
+  {
     uint32_t ticknow = 0;
 
-    for (;;) {
-      vTaskDelay(xDelay);
-      js_loop(ticknow);
-      if (!ticknow) {
-        show_free_mem(4);
+    while (true)
+    {
+      vTaskDelay (100 / portTICK_PERIOD_MS);
+
+      if (!js_loop (ticknow++))
+      {
+        break;
       }
-      ticknow++;
     }
   }
-  js_exit();
-}
 
-/*
- * This is entry point for user code
- */
-void ICACHE_FLASH_ATTR user_init(void)
+  jerry_task_exit ();
+  printf("Jerry Task failed\n");
+  while (true)
+  {
+  };
+} /* jerry_task */
+
+#if REDIRECT_STDOUT == 1 || REDIRECT_STDOUT == 2
+ssize_t _write_stdout_r (struct _reent *r, int fd, const void *ptr, size_t len)
 {
-  UART_SetBaudrate(UART0, BIT_RATE_115200);
+#if REDIRECT_STDOUT == 1
+    for (int i = 0; i < len; i++)
+    {
+        if (((char *)ptr)[i] == '\r')
+        {
+          continue;
+        }
 
-  show_free_mem(0);
-  wifi_softap_dhcps_stop();
-  show_free_mem(1);
-
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0);    // GPIO 0
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);    // GPIO 2
-
-  xTaskCreate(jerry_task, "jerry", JERRY_STACK_SIZE, NULL, 2, NULL);
-}
-
-/*
- * FunctionName : user_rf_cal_sector_set
- * Description  : SDK just reserved 4 sectors, used for rf init data and Parameters.
- *                We add this function to force users to set rf cal sector, since
- *                we don't know which sector is free in user's application.
- *                sector map for last several sectors : ABCCC
- *                A : rf cal
- *                B : rf init data
- *                C : sdk parameters
- * Parameters   : none
- * Returns      : rf cal sector
- */
-uint32 user_rf_cal_sector_set(void)
-{
-    flash_size_map size_map = system_get_flash_size_map();
-    uint32 rf_cal_sec = 0;
-
-    switch (size_map) {
-        case FLASH_SIZE_4M_MAP_256_256:
-            rf_cal_sec = 128 - 5;
-            break;
-
-        case FLASH_SIZE_8M_MAP_512_512:
-            rf_cal_sec = 256 - 5;
-            break;
-
-        case FLASH_SIZE_16M_MAP_512_512:
-        case FLASH_SIZE_16M_MAP_1024_1024:
-            rf_cal_sec = 512 - 5;
-            break;
-
-        case FLASH_SIZE_32M_MAP_512_512:
-        case FLASH_SIZE_32M_MAP_1024_1024:
-            rf_cal_sec = 1024 - 5;
-            break;
-        case FLASH_SIZE_64M_MAP_1024_1024:
-            rf_cal_sec = 2048 - 5;
-            break;
-        case FLASH_SIZE_128M_MAP_1024_1024:
-            rf_cal_sec = 4096 - 5;
-            break;
-        default:
-            rf_cal_sec = 0;
-            break;
+        if (((char *)ptr)[i] == '\n')
+        {
+          uart_putc (1, '\r');
+        }
+        uart_putc (1, ((char *)ptr)[i]);
     }
 
-    return rf_cal_sec;
+    return len;
+#endif
+    return 0;
 }
+#endif
+
+static void check_deep_sleep_status ()
+{
+  esp_spiffs_init();
+  int err = esp_spiffs_mount ();
+  if (err != SPIFFS_OK)
+  {
+    if (err == SPIFFS_ERR_NOT_A_FS)
+    {
+      SPIFFS_unmount (&fs);  // FS must be unmounted before formating
+      if (SPIFFS_format (&fs) == SPIFFS_OK)
+      {
+        printf("Format complete\n");
+      }
+      else
+      {
+        printf("Format failed\n");
+      }
+      esp_spiffs_mount();
+    }
+    else
+    {
+      printf("Error mount SPIFFS\n");
+      while (true) {};
+    }
+  }
+
+  spiffs_file fd = SPIFFS_open (&fs, "deep_sleep.txt", O_RDONLY | O_WRONLY, 0);
+
+  if (!(fd < 0))
+  {
+    const int buf_size = 0xFF;
+    double stored_sleep_time = -1;
+    double new_sleep_time = -1;
+    uint8_t buf[buf_size];
+    spiffs_file read_bytes = SPIFFS_read (&fs, fd, buf, buf_size);
+    printf("Read %d bytes\n", read_bytes);
+    if (!(read_bytes < 0)){
+      buf[read_bytes] = '\0';    // zero terminate string
+      printf("Data: %s\n", buf);
+      stored_sleep_time = atof ((const char *)buf);
+      if (stored_sleep_time < (double) UINT32_MAX)
+      {
+        modf(stored_sleep_time, &new_sleep_time);
+
+        char *buffer;
+        buffer = (char *) malloc (sizeof (char) * 256);
+        snprintf (buffer, sizeof (char) * 256, "%.0lf", new_sleep_time - UINT32_MAX);
+        int written = write(fd, buffer, strlen (buffer));
+        if (written != strlen(buffer))
+        {
+          printf("fatal error\n");
+          while (true){};
+        }
+        free (buffer);
+        close(fd);
+      }
+      else {
+        close(fd);
+        SPIFFS_remove(&fs, "deep_sleep.txt");
+      }
+    }
+
+    SPIFFS_unmount(&fs);
+    esp_spiffs_deinit();
+
+    sdk_system_deep_sleep (new_sleep_time == -1 ? stored_sleep_time : new_sleep_time, 0);
+  }
+  else {
+    printf("NO file\n");
+  }
+  SPIFFS_unmount(&fs);
+  esp_spiffs_deinit();
+}
+
+/**
+ * This is entry point for user code
+ */
+void user_init (void)
+{
+#if REDIRECT_STDOUT == 1
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
+  uart_set_baud (1, 115200);
+#endif
+
+#if REDIRECT_STDOUT == 1 || REDIRECT_STDOUT == 2
+  set_write_stdout (_write_stdout_r);
+#else
+  uart_set_baud (0, 115200);
+#endif
+
+  check_deep_sleep_status();
+
+#ifdef JERRY_DEBUGGER
+  struct sdk_station_config config =
+  {
+    .ssid = "ESP8266",
+    .password = "Barackospite"
+  };
+
+  sdk_wifi_set_opmode (STATION_MODE);
+  sdk_wifi_station_set_config (&config);
+  //sdk_wifi_station_set_auto_connect (0);
+  sdk_wifi_station_connect ();
+#endif
+
+  BaseType_t xReturned;
+  TaskHandle_t xHandle = NULL;
+  xReturned = xTaskCreate (jerry_task, "jerry", JERRY_STACK_SIZE, NULL, 2, &xHandle);
+  if (xReturned != pdPASS)
+  {
+    printf("Cannot allocate enough memory to task.\n");
+    while (true) {};
+  }
+} /* user_init */

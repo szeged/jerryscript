@@ -1,162 +1,55 @@
-# Copyright JS Foundation and other contributors, http://js.foundation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+PROGRAM=USER
+EXTRA_COMPONENTS = user modules
+EXTRA_COMPONENTS += $(RTOS_PATH)/extras/fatfs
+EXTRA_COMPONENTS += $(RTOS_PATH)/extras/sdio
+EXTRA_COMPONENTS += $(RTOS_PATH)/extras/sntp
+EXTRA_COMPONENTS += $(RTOS_PATH)/extras/spiffs
+EXTRA_COMPONENTS += $(RTOS_PATH)/extras/i2c
 
-#############################################################
-# Required variables for each makefile
-# Discard this section from all parent makefiles
-# Expected variables (with automatic defaults):
-#   CSRCS (all "C" files in the dir)
-#   SUBDIRS (all subdirs with a Makefile)
-#   GEN_LIBS - list of libs to be generated ()
-#   GEN_IMAGES - list of object file images to be generated ()
-#   GEN_BINS - list of binaries to be generated ()
-#   COMPONENTS_xxx - a list of libs/objs in the form
-#     subdir/lib to be extracted and rolled up into
-#     a generated lib/image xxx.a ()
-#
-# Tabsize : 8
-#
-TARGET = eagle
-FLAVOR = release
-#FLAVOR = debug
+EXTRA_CFLAGS += -DJERRY_CONST_DATA='__attribute__((section(".irom0.literal")))'
+#SPIFFS
+FLASH_SIZE = 32
+SPIFFS_BASE_ADDR = 0x200000
+SPIFFS_SIZE = 0x100000
+#EXTRA_CFLAGS += -D SPIFFS_CACHE=0
 
-#EXTRA_CCFLAGS += -u
+#FATFS
+FATFS_USE_MKFS = 0
+FATFS_USE_EXPAND = 0
+FATFS_USE_CHMOD = 0
+FATFS_USE_LABEL = 0
+FATFS_USE_FORWARD = 1
+FATFS_MAX_LFN = 255
+FATFS_FS_RPATH = 1
+FATFS_FS_EXFAT = 0
+FATFS_FS_LOCK = 64
+FATFS_USE_LFN = 3
+FATFS_USE_FASTSEEK = 0
 
-ifndef PDIR # {
-GEN_IMAGES= eagle.app.v6.out
-GEN_BINS= eagle.app.v6.bin
-SPECIAL_MKTARGETS=$(APP_MKTARGETS)
-SUBDIRS= user
-endif # } PDIR
+EXTRA_CFLAGS += -D FF_USE_LFN=3 -D FF_FS_EXFAT=$(FATFS_FS_EXFAT) -D _FF_HIGH_SPEED_SPI_FREQ_DIV=SPI_FREQ_DIV_125K
+EXTRA_CFLAGS += -D FF_USE_MKFS=$(FATFS_USE_MKFS) -D FF_FS_EXFAT=$(FATFS_FS_EXFAT) -D FF_CODE_PAGE=437 -D FF_USE_CHMOD=$(FATFS_USE_CHMOD)
+EXTRA_CFLAGS += -D FF_USE_LABEL=$(FATFS_USE_LABEL) -D FF_USE_FORWARD=$(FATFS_USE_FORWARD) -D FF_MAX_LFN=$(FATFS_MAX_LFN)
+EXTRA_CFLAGS += -D FF_FS_RPATH=$(FATFS_FS_RPATH) -D FF_USE_LFN=$(FATFS_USE_LFN) -D FF_USE_FASTSEEK=$(FATFS_USE_FASTSEEK) -D ESP8266_ENABLE_LOW_ICACHE=0
 
-# path to the JERRYSCRIPT directory
-JERRYDIR ?= $(CURDIR)/../../..
+#JERRY
+LINKER_SCRIPTS := ld/program.ld
+FLAVOR := release
+PRINTF_SCANF_FLOAT_SUPPORT = 0
 
-LDDIR = $(SDK_PATH)/ld
-
-#############################################################
-# JerryScript requires a modified linker script with specified alignments
-# 	so we use it instead of the original one from SDK.
-JERRY_LD_FILE = $(CURDIR)/ld/eagle.app.v6.ld
-
-CCFLAGS += -Os -std=c99
-#CCFLAGS += -O0
-
-TARGET_LDFLAGS =					\
-	-nostdlib					\
-	-Wl,-EL						\
-	--longcalls					\
-	--text-section-literals
-
-ifeq ($(FLAVOR),debug)
-	TARGET_LDFLAGS += -O0 -g
+ifeq ($(JERRYDEBUGGER), ON)
+	EXTRA_CFLAGS += -D JERRY_DEBUGGER
 endif
 
-ifeq ($(FLAVOR),release)
-	TARGET_LDFLAGS += -Os
+ifeq ($(REDIRECT_STDOUT), ON)
+	EXTRA_CFLAGS += -D REDIRECT_STDOUT=1
 endif
 
-COMPONENTS_eagle.app.v6 =				\
-	user/libuser.a
-
-LINKFLAGS_eagle.app.v6 =				\
-	-L$(SDK_PATH)/lib				\
-	-Wl,--gc-sections				\
-	-Wl,-Map,output.map				\
-	-nostdlib					\
-	-T$(JERRY_LD_FILE)				\
-	-Wl,--no-check-sections				\
-	-u call_user_start				\
-	-Wl,-static					\
-	-Wl,--start-group				\
-	-lcirom						\
-	-lcrypto					\
-	-lespconn					\
-	-lespnow					\
-	-lfreertos					\
-	-lgcc						\
-	-lhal						\
-	-ljson						\
-	-llwip						\
-	-ldriver					\
-	-lmain						\
-	-lmirom						\
-	-lnet80211					\
-	-lnopoll					\
-	-lphy						\
-	-lpp						\
-	-lpwm						\
-	-lsmartconfig					\
-	-lspiffs					\
-	-lssl						\
-	-lwpa						\
-	-lwps						\
-	-L./libs					\
-	-ljerry-core					\
-	-ljerry-libm					\
-	$(DEP_LIBS_eagle.app.v6)			\
-	-Wl,--end-group
-
-DEPENDS_eagle.app.v6 =					\
-	$(JERRY_LD_FILE)				\
-	$(LDDIR)/eagle.rom.addr.v6.ld			\
-	./include/jerry-targetjs.h			\
-	./libs/libjerry-core.a				\
-	./libs/libjerry-libm.a
+ifeq ($(REDIRECT_STDOUT), NONE)
+	EXTRA_CFLAGS += -D REDIRECT_STDOUT=2
+endif
 
 
-#############################################################
-# Configuration i.e. compile options etc.
-# Target specific stuff (defines etc.) goes in here!
-# Generally values applying to a tree are captured in the
-#   makefile at its root level - these are then overridden
-#   for a subtree within the makefile rooted therein
-#
+EXTRA_LDFLAGS = -L$(CUR_DIR)libs
+LIBS = hal jerry-core jerry-libm
 
-#UNIVERSAL_TARGET_DEFINES =    \
-
-# Other potential configuration flags include:
-#  -DTXRX_TXBUF_DEBUG
-#  -DTXRX_RXBUF_DEBUG
-#  -DWLAN_CONFIG_CCX
-CONFIGURATION_DEFINES = -DICACHE_FLASH
-
-DEFINES += \
-	$(UNIVERSAL_TARGET_DEFINES) \
-	$(CONFIGURATION_DEFINES)
-
-DDEFINES += \
-	$(UNIVERSAL_TARGET_DEFINES) \
-	$(CONFIGURATION_DEFINES)
-
-
-#############################################################
-# Recursion Magic - Don't touch this!!
-#
-# Each subtree potentially has an include directory
-#   corresponding to the common APIs applicable to modules
-#   rooted at that subtree. Accordingly, the INCLUDE PATH
-#   of a module can only contain the include directories up
-#   its parent path, and not its siblings
-#
-# Required for each makefile to inherit from the parent
-#
-
-INCLUDES := -I $(JERRYDIR)/jerry-core/include
-INCLUDES := $(INCLUDES) -I $(PDIR)include -I $(PDIR)source
-sinclude $(SDK_PATH)/Makefile
-
-.PHONY: FORCE
-
-FORCE:
+include $(RTOS_PATH)/common.mk
