@@ -18,7 +18,6 @@
 
 
 /* number of stack items, x4 for bytes */
-#define JERRY_STACK_SIZE 2000
-
+#define JERRY_STACK_SIZE 1280
 
 #endif

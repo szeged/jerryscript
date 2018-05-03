@@ -17,16 +17,17 @@
 #define __JERRY_RUN_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-void js_entry (void);
-int js_eval (const char *source_p, const size_t source_size);
-int js_loop (uint32_t ticknow);
-void js_exit (void);
+bool jerry_task_init (void);
+bool parse_resource (const char *name, const char *source, const int length);
+bool js_loop (uint32_t ticknow);
+void jerry_task_exit (void);
 
 
 #ifdef __cplusplus
