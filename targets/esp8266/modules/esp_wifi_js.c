@@ -315,7 +315,6 @@ DELCARE_HANDLER (wifi_send)
   file_name_buf_p[file_name_req_sz] = 0;
 
   uint32_t data_length = jerry_get_number_value (args_p[4]);
-  jerry_length_t bytes_to_send = 0;
   jerry_value_t source = jerry_create_undefined();
 
   if (jerry_value_is_object (args_p[2]))
@@ -330,16 +329,9 @@ DELCARE_HANDLER (wifi_send)
       return jerry_create_boolean (true);
     }
   }
-  else
-  {
-    source = jerry_value_to_string (args_p [2]);
-    bytes_to_send = jerry_get_string_length (args_p[2]);
-  }
 
-  bytes_to_send = data_length < bytes_to_send ? data_length : bytes_to_send;
-
-  return send_data_on_tcp (source, bytes_to_send, (const char *) str_buf_p, port, file_name_buf_p, 0, NULL, true, true);
-
+  source = jerry_value_to_string (args_p [2]);
+  return send_data_on_tcp (source, data_length, (const char *) str_buf_p, port, file_name_buf_p, 0, NULL, true, true);
 }
 
 /*
