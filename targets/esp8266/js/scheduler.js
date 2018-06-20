@@ -98,6 +98,7 @@ scheduler.prototype._nextTask = function () {
   var deepSleepTime;
   var taskCounter = 0;
   var success = true;
+  var should_start_again = false;
   for (taskCounter = 0; taskCounter < this.taskList.length; taskCounter++) {
     var remaningTime;
     if (this.storedTime == 0){
@@ -134,14 +135,22 @@ scheduler.prototype._nextTask = function () {
     }
     else {
       if (spentTime > this.taskList[0].interval){
-        //Too much time spent in the previous task, should start it again
+        /* Too much time spent in the previous task, should start it again
+           but first check whether the next tasks can be executed */
+        should_start_again = true;
+        continue;
+      }
+
+      if (should_start_again){
         taskCounter = 0;
         spentTime = 0;
         taskStartTime = DELAY.systemTime();
         timestamp = this._currentTimestamp(taskStartTime);
         this.storedTime += this.taskList[0].interval;
+        should_start_again = false;
         continue;
       }
+
       print ("Going to deepSleep");
       this.storedTime += spentTime;
       deepSleepTime = Math.max(remaningTime - spentTime, 0);
