@@ -1,26 +1,20 @@
 function scheduler(){
   this.taskList = [];
-  this.systemTime = DELAY.systemTime();
+  this.taskCounter = 0;
   this.delta = 2 * 1000;
   this.actualDate;
-  this.storedTime = 0;
   this.error = false;
   this.configObj;
   this.fsConfigFile = "config.json";
-  this.fsRtcFile = "rtc.txt";
+  this.fsTaskFile = "tasks.json";
   this.fsTimeStampFile = "timestamp.txt";
-
-  if (FS.exists (this.fsRtcFile)){
-    this.storedTime = Number (FS.read (this.fsRtcFile));
-    print ("Stored RTC: " + this.storedTime);
-  }
 
   if (FS.exists(this.fsConfigFile)){
     this.configObj = JSON.parse (FS.read (this.fsConfigFile));
     if (FS.exists (this.fsTimeStampFile)){
       this.actualDate = new Date (Number (FS.read (this.fsTimeStampFile)));
     } else {
-      this.actualDate = new Date (this.storedTime + DELAY.systemTime());
+      this.actualDate = new Date (DELAY.systemTime());
     }
     print ("TimeStamp " + this.actualDate.getTime());
   } else {
@@ -32,20 +26,29 @@ function scheduler(){
                     data_send_interval : 1000 * 1 * 10, // 10 min
                     delete_after_send : false
                   };
-      this.storedTime = 1;
     }
+  }
+
+  this.firstTime = this.actualDate + DELAY.systemTime();
+
+  if (FS.exists(this.fsTaskFile)){
+    this.taskList = JSON.parse (FS.read (this.fsTaskFile));
   }
 };
 
 scheduler.prototype.addTask = function (func, config_interval) {
-  if (typeof func === "function"){
-    if (typeof config_interval === "number"){
-      this.taskList.push({task : func, interval : config_interval});
+  if (this.taskList.length) {
+    this.taskList[this.taskCounter++].task = func;
+  } else {
+    if (typeof func === "function"){
+      if (typeof config_interval === "number"){
+        this.taskList.push({task: func, interval: config_interval, lastTime: this.firstTime});
+      } else{
+        throw new Error ("Argument 2 must be a number");
+      }
     } else{
-      throw new Error ("Argument 2 must be a number");
+      throw new Error ("Argument 1 must be a function");
     }
-  } else{
-    throw new Error ("Argument 1 must be a function");
   }
 };
 
@@ -57,30 +60,31 @@ scheduler.prototype._orderTasks = function () {
 
 scheduler.prototype._restoreDefault = function () {
     print ("Error, restore files");
-    FS.remove (this.fsRtcFile);
     FS.remove (this.fsConfigFile);
-    this.error = true;
+    FS.remove (this.fsTaskFile);
+    DELAY.deepSleep (1);
 };
 
 scheduler.prototype.removeAllTasks = function () {
   while (this.taskList.length > 0){
     this.taskList.pop();
   }
-
-};
-scheduler.prototype.resetClock = function () {
-  this.storedTime = 0;
 };
 
 scheduler.prototype._currentTimestamp = function () {
   var date;
   if (WIFI.available()){
     date = new Date();
+    this.actualDate = date;
   } else {
     date = this.actualDate;
   }
   var date_str = date.toDateString() + "_" +  date.toTimeString();
   return date_str.replace(/-/g, '_').replace(/:/g, '_').replace(/\./g, '_');
+};
+
+scheduler.prototype._currentTime = function () {
+  return this.actualDate.getTime() + DELAY.systemTime() - this.firstTime;
 };
 
 scheduler.prototype.elapsedTime = function (callback){
@@ -90,113 +94,75 @@ scheduler.prototype.elapsedTime = function (callback){
   return Math.floor(endTime - startTime);
 }
 
-scheduler.prototype._nextTask = function () {
-  this._orderTasks();
-  var taskStartTime = DELAY.systemTime();
-  var timestamp = this._currentTimestamp(taskStartTime);
-  var spentTime = 0;
-  var deepSleepTime;
-  var taskCounter = 0;
-  var success = true;
-  var should_start_again = false;
-  for (taskCounter = 0; taskCounter < this.taskList.length; taskCounter++) {
-    var remaningTime;
-    if (this.storedTime == 0){
-      remaningTime = this.taskList[taskCounter].interval - (taskStartTime + spentTime - this.systemTime);
-      if (remaningTime > this.delta){ // Can deepSleep until next tick
-        remaningTime = this.taskList[0].interval;
-        spentTime = taskStartTime + spentTime - this.systemTime;
-      }
-    }
-    else {
-      var previousStartTime = (this.storedTime) % this.taskList[taskCounter].interval; // Next task could be start at the begining
-      var actualStartTime = (this.storedTime + spentTime) % this.taskList[taskCounter].interval; // Next task can be executed now
-      remaningTime = Math.min(previousStartTime, actualStartTime);
-      if (remaningTime > this.delta){ // Can deepSleep until next tick
-        remaningTime = this.taskList[0].interval;
-      }
-      print ("remaningTime: ", remaningTime);
-    }
-
-    if (remaningTime <= this.delta ){
-      if (remaningTime > 0){
-        print ("Going to normal sleep");
-        spentTime += remaningTime;
-        DELAY.millis(remaningTime);
-      }
-      spentTime += this.elapsedTime(function () {
-        try {
-          this.taskList[taskCounter].task(timestamp);
-        } catch (e) {
-          print (e);
-          success = false;
-        }
-      });
-    }
-    else {
-      if (spentTime > this.taskList[0].interval){
-        /* Too much time spent in the previous task, should start it again
-           but first check whether the next tasks can be executed */
-        should_start_again = true;
-        continue;
-      }
-
-      if (should_start_again){
-        taskCounter = 0;
-        spentTime = 0;
-        taskStartTime = DELAY.systemTime();
-        timestamp = this._currentTimestamp(taskStartTime);
-        this.storedTime += this.taskList[0].interval;
-        should_start_again = false;
-        continue;
-      }
-
-      print ("Going to deepSleep");
-      this.storedTime += spentTime;
-      deepSleepTime = Math.max(remaningTime - spentTime, 0);
-      break;
-    }
-    if (!success){
-      break;
-    }
-  }
-  configFileBeenStored = false;
-
-  return {
-    nextDeepSleepTime : this.taskList.length == taskCounter ? 0 : deepSleepTime,
-    taskSuccess : success
-  }
-};
-
-scheduler.prototype.success = function(time) {
-  return time >= 1;
-}
-
 scheduler.prototype.nextTask = function() {
-  var result;
-  var schedulerSpentTime = this.elapsedTime(function (){
-    result = this._nextTask();
-    result.nextDeepSleepTime -= this.elapsedTime (function () {
-      if (!FS.write(this.fsConfigFile, JSON.stringify (this.configObj))){
-        this._restoreDefault();
+  var lastDate = this._currentTime();
+  var deepSleepTime;
+  var taskQueue = [];
+  while (true) {
+    // 1 second has passed (at least)
+    var currentDate = this._currentTime();
+    var nextTaskTime = this.taskList[0].interval - (currentDate - this.taskList[0].lastTime);
+    if (currentDate - lastDate >= 1000) {
+      for (var i = 0; i < this.taskList.length; i++) {
+        var elapsed = currentDate - this.taskList[i].lastTime;
+        if (elapsed >= this.taskList[i].interval) {
+          taskQueue.push(this.taskList[i]);
+          this.taskList[i].lastTime = this._currentTime();
+        } else {
+          nextTaskTime = Math.min(this.taskList[i].interval - elapsed, nextTaskTime);
+        }
       }
-    });
+      if (nextTaskTime >= this.delta) {
+        print('Deepsleep for ', nextTaskTime);
+        deepSleepTime = nextTaskTime;
+        break;
+      }
 
-    if (!result.taskSuccess) {
+      if (taskQueue.length > 0) {
+        taskQueue.sort(function(a, b) {
+          return a.lastTime - b.lastTime || b.interval < a.interval;
+        });
+        for (var i = 0; i < taskQueue.length; i++) {
+          try {
+            // Execute the stored task
+            taskQueue[i].task(this._currentTimestamp ());
+          } catch (e) {
+            // The current task has throw an Error
+            this.error = true;
+            break;
+          }
+        }
+
+        if (this.error) {
+          break;
+        }
+      }
+      taskQueue = [];
+      lastDate = currentDate;
+    }
+  }
+
+  deepSleepTime -= this.elapsedTime (function () {
+    if (!FS.write(this.fsConfigFile, JSON.stringify (this.configObj))){
       this._restoreDefault();
     }
-
-    result.nextDeepSleepTime -= this.elapsedTime(function () {
-      var rtcTime = Math.round((Math.max(result.nextDeepSleepTime, 0) + this.storedTime) / 1000) * 1000;
-      if (!FS.write(this.fsRtcFile, rtcTime)){
-        this._restoreDefault();
-      }
-    });
   });
 
-  if (!FS.write(this.fsTimeStampFile, this.actualDate.getTime() + schedulerSpentTime + 26 + Math.max (result.nextDeepSleepTime, 0))){
+  deepSleepTime -= this.elapsedTime (function () {
+    if (!FS.write(this.fsTaskFile, JSON.stringify (this.taskList))){
+      this._restoreDefault();
+    }
+  });
+
+  if (!FS.write(this.fsTimeStampFile, this._currentTime() + 26 + Math.max (deepSleepTime, 0))){
     this._restoreDefault();
   }
 
-  return this.error ? 1 : Math.max (result.nextDeepSleepTime, 0);
+  if (this.error) {
+    this._restoreDefault();
+  }
+
+  if (deepSleepTime){
+    DELAY.deepSleep(deepSleepTime);
+  }
 }

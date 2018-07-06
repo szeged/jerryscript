@@ -59,24 +59,6 @@ espScheduler.removeAllTasks();
 espScheduler.addTask(mytask2, 45000);
 ```
 
-### Scheduler.resetClock()
-  - Returns: {undefined}
-
-  Restarts the scheduler own clock by setting it zero.
-
-**Example**
-
-```js
-function mytask() {
-  //do some stuff
-}
-
-var espScheduler = new Scheduler(0);
-espScheduler.addTask(mytask, 3600);
-espScheduler.removeAllTasks();
-espScheduler.resetClock();
-```
-
 ### Scheduler.elapsedTime(callback)
   - `callback` {fucntion} - Callback function.
   - Returns: {integer} - `callback` funtion run time in milliseconds.
@@ -95,9 +77,9 @@ var time = espScheduler.elapsedTime(mytask);
 ```
 
 ### Scheduler.nextTask()
-  - Returns: {object} - operation call result.
+  - Perfroms all of the previously set tasks that can be executed continuously. If any kind of error occurs during the task execution the the scheduler resets itself to the default configuration.
 
-  Perfroms all of the previously set tasks that can be executed continuously. The operation returns an object that contains an {integer} which represents the available time that can be spent in deep sleep state until the next task should be executed and a {boolean} value which is `true` if there was no error during the task(s) execution.
+  - **NOTE:** The function can send the board to deep-sleep mode!
 
 
 **Example**
@@ -119,12 +101,10 @@ var espScheduler = new Scheduler(0);
 espScheduler.addTask(mytask, 3600);
 espScheduler.addTask(mytask2, 4000);
 espScheduler.addTask(mytask, 560000);
-var result = espScheduler.nextTask();
-if (result.taskSuccess){
-  // There was no error
-  DELAY.deepSleep(result.nextDeepSleepTime); // deepSleep for (3600 - operation time) ms
-} else {
-  // Handle error
+
+while (true)
+{
+  espScheduler.nextTask();
 }
 
 ```

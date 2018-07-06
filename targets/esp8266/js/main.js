@@ -81,17 +81,10 @@ function configUpdateTask(timestamp, jsref) {
   print ("GET task Start");
   initWifiForTask(function () {
     var str = WIFI.receive ("192.168.0.2", 8000, "/config.json");
-    if (jsref){
-      jsref.configObj = JSON.parse (str);
-      initTasks(jsref);
-      jsref.resetClock();
-      jsref.actualDate = new Date();
-    } else {
-      espScheduler.configObj = JSON.parse (str);
-      initTasks();
-      espScheduler.resetClock();
-      espScheduler.actualDate = new Date();
-    }
+    var ref = jsref || espScheduler;
+    ref.configObj = JSON.parse (str);
+    initTasks(jsref);
+    ref.actualDate = new Date();
   });
 }
 
@@ -171,27 +164,16 @@ function sendDataTask(timestamp){
 }
 
 function initTasks (jsref){
-  if (jsref){
-    jsref.removeAllTasks();
-    jsref.addTask(sensorsTask, jsref.configObj.measure_interval);
-    jsref.addTask(cameraTask, jsref.configObj.pic_interval);
-    jsref.addTask(configUpdateTask, jsref.configObj.get_interval);
-    jsref.addTask(sendDataTask, jsref.configObj.data_send_interval);
-  } else {
-    espScheduler.removeAllTasks();
-    espScheduler.addTask(sensorsTask, espScheduler.configObj.measure_interval);
-    espScheduler.addTask(cameraTask, espScheduler.configObj.pic_interval);
-    espScheduler.addTask(configUpdateTask, espScheduler.configObj.get_interval);
-    espScheduler.addTask(sendDataTask, espScheduler.configObj.data_send_interval);
-  }
+  var ref = jsref || espScheduler;
+  ref.removeAllTasks();
+  ref.addTask(sensorsTask, ref.configObj.measure_interval);
+  ref.addTask(cameraTask, ref.configObj.pic_interval);
+  ref.addTask(configUpdateTask, ref.configObj.get_interval);
+  ref.addTask(sendDataTask, ref.configObj.data_send_interval);
 }
 
 initTasks ();
 
 function sysloop(ticknow) {
-  var deepSleepTime = espScheduler.nextTask();
-   if (espScheduler.success (deepSleepTime)){
-    print ("DEEPSLEEP FOR "+ deepSleepTime + " MS");
-     DELAY.deepSleep(deepSleepTime);
-   }
+  espScheduler.nextTask();
 };
