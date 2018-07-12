@@ -55,6 +55,7 @@ DELCARE_HANDLER (fs_write)
     if (open_file_success (path_str_buf_p, SPIFFS_O_WRONLY | SPIFFS_O_CREAT | O_TRUNC, &fd))
     {
       written = SPIFFS_write (&fs, fd, content_str_buf_p, content_req_sz);
+      SPIFFS_close(&fs, fd);
     }
     else
     {
@@ -109,20 +110,16 @@ DELCARE_HANDLER (fs_read)
       if (bytes_read >= 0){
         result = jerry_create_string_sz ((const jerry_char_t *) buffer, bytes_read);
       }
-      //SPIFFS_close (&fs, fd);
+      SPIFFS_close (&fs, fd);
     }
     else
     {
-      local_deinit_spiffs ();
-      free (buffer);
-      return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Cannot read file!");
+      result = jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Cannot read file!");
     }
   }
   else
   {
-    free (buffer);
-    local_deinit_spiffs ();
-    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Cannot init SPIFFS");
+    result = jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Cannot init SPIFFS");
   }
 
   free (buffer);
@@ -155,6 +152,10 @@ DELCARE_HANDLER (fs_exists)
   {
     spiffs_file fd;
     success = open_file_success (path_str_buf_p, O_RDONLY, &fd);
+    if (success)
+    {
+      SPIFFS_close (&fs, fd);
+    }
   }
   else
   {

@@ -3,6 +3,7 @@ var uCam = new uCamIII(5);
 var sensors = new sensorCollection();
 var configFileBeenStored = false;
 var sdFileNames = ["config_", "picture_", "sensor_data_"];
+var defaultConfig = false;
 
 var espScheduler = new scheduler();
 sensors.addSensor(tempSensor);
@@ -11,7 +12,7 @@ sensors.addSensor(tempSensor);
 function initWifiForTask(callback){
   if (!WIFI.available()){
     try {
-      WIFI.connect ("ESP8266", "Barackospite");
+      WIFI.connect ("SSID", "PASSWORD");
     } catch (e) {
       print (e);
       return;
@@ -164,15 +165,19 @@ function sendDataTask(timestamp){
 }
 
 function initTasks (jsref){
+  if (jsref) {
+    defaultConfig = true;
+  }
   var ref = jsref || espScheduler;
-  ref.removeAllTasks();
   ref.addTask(sensorsTask, ref.configObj.measure_interval);
   ref.addTask(cameraTask, ref.configObj.pic_interval);
   ref.addTask(configUpdateTask, ref.configObj.get_interval);
   ref.addTask(sendDataTask, ref.configObj.data_send_interval);
 }
 
-initTasks ();
+if (!defaultConfig){
+  initTasks ();
+}
 
 function sysloop(ticknow) {
   espScheduler.nextTask();

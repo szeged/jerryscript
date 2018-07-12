@@ -36,29 +36,6 @@ espScheduler.addTask(mytask, 3600);
 espScheduler.addTask(mytask2, 45000);
 ```
 
-### Scheduler.removeAllTasks()
-  - Returns: {undefined}
-
-  Removes all tasks from task list.
-
-**Example**
-
-```js
-function mytask() {
-  //do some stuff
-}
-
-function mytask2() {
-  //do some stuff
-}
-
-var espScheduler = new Scheduler(0);
-espScheduler.addTask(mytask, 3600);
-espScheduler.addTask(mytask2, 45000);
-espScheduler.removeAllTasks();
-espScheduler.addTask(mytask2, 45000);
-```
-
 ### Scheduler.elapsedTime(callback)
   - `callback` {fucntion} - Callback function.
   - Returns: {integer} - `callback` funtion run time in milliseconds.

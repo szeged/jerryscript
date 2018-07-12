@@ -716,7 +716,6 @@ DELCARE_HANDLER (sd_read)
     ret_val = terminte_if_fail (f_read (file_p, work_buffer, bytes_to_read, &read), NULL, SD_CARD_READ);
     if (read != 0 && jerry_value_is_undefined (ret_val))
     {
-    printf("READ: %d\n", read);
       free (work_buffer);
       return jerry_create_string_sz ((const jerry_char_t *) work_buffer, read);
     }

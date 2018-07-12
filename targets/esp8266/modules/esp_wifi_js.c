@@ -202,11 +202,15 @@ send_data_on_tcp (jerry_value_t source, uint32_t bytes_to_send, const char *serv
   {
     if (!send_package_size (file_name_length))
     {
+      netconn_close (conn);
+      netconn_delete (conn);
       return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Failed to send header!");
     }
 
     if (!send_package_data (file_name_length, file_name))
     {
+      netconn_close (conn);
+      netconn_delete (conn);
       return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Failed to send data!");
     }
   }
@@ -420,6 +424,8 @@ DELCARE_HANDLER (wifi_receive)
     freeaddrinfo (res);
     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Failed to connect!");
   }
+
+  freeaddrinfo (res);
 
   message_buffer = malloc (WIFI_PACKAGE_SIZE * 2);
 
