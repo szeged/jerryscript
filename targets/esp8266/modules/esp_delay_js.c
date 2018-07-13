@@ -14,7 +14,10 @@ DELCARE_HANDLER (delay_ms)
   }
 
   int value = (int) jerry_get_number_value (args_p[0]);
-  vTaskDelay (value / portTICK_PERIOD_MS);
+  if (value > 0)
+  {
+    vTaskDelay (value / portTICK_PERIOD_MS);
+  }
 
   return jerry_create_boolean (true);
 } /* delay_ms */
@@ -32,7 +35,11 @@ DELCARE_HANDLER (delay_us)
   }
 
   int value = (int) jerry_get_number_value (args_p[0]);
-  sdk_os_delay_us (value);
+
+  if (value > 0)
+  {
+    sdk_os_delay_us (value);
+  }
 
   return jerry_create_boolean (true);
 } /* delay_us */

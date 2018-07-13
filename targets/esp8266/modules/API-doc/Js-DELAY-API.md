@@ -3,7 +3,7 @@
 This module stands for handling system time, delaying etc.
 
 ## Methods
-### DELAY.millies(ms)
+### DELAY.millis(ms)
   - `ms` {integer} - Sleep time in milliseconds.
   - Returns: {boolean} - `true` | `false` based on the operation success.
 
@@ -12,7 +12,7 @@ This module stands for handling system time, delaying etc.
 **Example**
 
 ```js
-var success = DELAY.millies(150);
+var success = DELAY.millis(150);
 // Wait for 150 ms
 // Do something else
 ```

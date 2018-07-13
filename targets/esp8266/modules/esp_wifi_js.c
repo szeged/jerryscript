@@ -176,29 +176,26 @@ static bool forward_data_on_tcp (FIL *fil, uint32_t to_send)
 
 static jerry_value_t
 send_data_on_tcp (jerry_value_t source, uint32_t bytes_to_send, const char *server, uint32_t port,
-                  jerry_char_t *file_name, jerry_size_t file_name_length, FIL *forward, bool socket_create, bool close_socket)
+                  jerry_char_t *file_name, jerry_size_t file_name_length, FIL *forward)
 {
-  if (socket_create)
+  conn = netconn_new (NETCONN_TCP);
+
+  if (conn == NULL)
   {
-    conn = netconn_new (NETCONN_TCP);
-
-    if (conn == NULL)
-    {
-      return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Failed to allocate socket!");
-    }
-
-    ip_addr_t addr;
-    err = netconn_gethostbyname(server, &addr);
-    if (err)
-    {
-      netconn_delete(conn);
-      return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Failed find given host!");
-    }
-
-    netconn_connect(conn, &addr, port);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Failed to allocate socket!");
   }
 
-  if (socket_create && file_name != NULL)
+  ip_addr_t addr;
+  err = netconn_gethostbyname(server, &addr);
+  if (err)
+  {
+    netconn_delete(conn);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Failed find given host!");
+  }
+
+  netconn_connect(conn, &addr, port);
+
+  if (file_name != NULL)
   {
     if (!send_package_size (file_name_length))
     {
@@ -263,11 +260,8 @@ send_data_on_tcp (jerry_value_t source, uint32_t bytes_to_send, const char *serv
 
   free (message_buffer);
 
-  if (close_socket)
-  {
-    netconn_close (conn);
-    netconn_delete (conn);
-  }
+  netconn_close (conn);
+  netconn_delete (conn);
 
   return jerry_create_boolean (true);
 }
@@ -329,13 +323,13 @@ DELCARE_HANDLER (wifi_send)
     if (has_p && type_p == get_native_file_obj_type_info())
     {
       FIL *f = native_p;
-      send_data_on_tcp (0, data_length, (const char *) str_buf_p, port, file_name_buf_p, file_name_req_sz, f, true, true);
+      send_data_on_tcp (0, data_length, (const char *) str_buf_p, port, file_name_buf_p, file_name_req_sz, f);
       return jerry_create_boolean (true);
     }
   }
 
   source = jerry_value_to_string (args_p [2]);
-  return send_data_on_tcp (source, data_length, (const char *) str_buf_p, port, file_name_buf_p, 0, NULL, true, true);
+  return send_data_on_tcp (source, data_length, (const char *) str_buf_p, port, file_name_buf_p, 0, NULL);
 }
 
 /*
