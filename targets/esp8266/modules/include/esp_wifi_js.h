@@ -18,6 +18,7 @@
 #define WIFI_AVAILABLE "available"
 #define WIFI_SEND "send"
 #define WIFI_RECEIVE "receive"
+#define WIFI_POST "post"
 
 #define WIFI_MAX_CONNECT_ATTEMPTS 100
 #define WIFI_PACKAGE_SIZE 512

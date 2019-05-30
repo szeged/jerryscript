@@ -202,3 +202,11 @@ uCamIII.prototype.storePicture = function (path) {
   print ("The picture has been stored!");
   return true;
 }
+
+uCamIII.prototype.live = function (sec) {
+  if (!FS.write("live.txt", sec.toString())){
+    throw Error ("Cannot start live");
+  }
+
+  DELAY.deepSleep(10);
+}

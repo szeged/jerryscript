@@ -27,11 +27,12 @@ function scheduler(){
     print ("TimeStamp " + this.actualDate.getTime());
   } else {
     this.configObj = { get_interval : 1000 * 60 * 5, // 5 min
-                  pic_interval : 1000 * 30, // 30 sec
-                  measure_interval : 1000 * 30, // 30 sec
-                  data_send_interval : 1000 * 60 * 10, // 10 min
-                  delete_after_send : false
-                };
+                      pic_interval : 1000 * 30, // 30 sec
+                      measure_interval : 1000 * 30, // 30 sec
+                      data_send_interval : 1000 * 60 * 10, // 10 min
+                      live_timeout : 0, // 0 s
+                      delete_after_send : false
+                    };
     this.actualDate = new Date (DELAY.systemTime());
     this.firstTime = this.actualDate.getTime() + DELAY.systemTime();
     configUpdateTask(undefined, this);

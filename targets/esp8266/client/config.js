@@ -37,6 +37,7 @@ var default_value = JSON.stringify ({get_interval : 10 * 1000 * 60,
                                     pic_interval : 10 * 1000 * 60,
                                     measure_interval : 10 * 1000 * 60,
                                     data_send_interval : 1000 * 60 * 60,
+                                    camera_live_interval : 0,
                                     delete_after_send : true});
 
 var cssFileName = "bootstrap.min.css";
@@ -82,7 +83,7 @@ http.createServer(function (request, response) {
             if (actualConfig.hasOwnProperty(splitted[0])){
               if (splitted.length == 1){
                 var numValue = Number(value);
-                if (!isNaN(numValue) && numValue > 0)
+                if (value && !isNaN(numValue))
                 {
                   actualConfig[splitted[0]] = numValue;
                 }
@@ -220,6 +221,18 @@ http.createServer(function (request, response) {
                 '<div class="input-group col-md-7">' +
                   '<input type="number" class="form-control" style ="margin-right: 20;" id="data_send_interval" name="data_send_interval" placeholder="Enter data send interval">' +
                   '<select class="form-control" name="data_send_interval_unit">' +
+                    '<option>hour</option>' +
+                    '<option>minute</option>' +
+                    '<option>second</option>' +
+                    '<option>millisecond</option>' +
+                  '</select>' +
+                '</div>' +
+              '</div>' +
+              '<div class="form-group mb-2">' +
+                '<label class= "control-label col-md-5">Camera live timeout</label>' +
+                '<div class="input-group col-md-7">' +
+                  '<input type="number" class="form-control" style ="margin-right: 20;" id="camera_live_interval" name="camera_live_interval" placeholder="Enter data send interval">' +
+                  '<select class="form-control" name="camera_live_interval_unit">' +
                     '<option>hour</option>' +
                     '<option>minute</option>' +
                     '<option>second</option>' +

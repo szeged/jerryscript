@@ -41,7 +41,21 @@
 #include "esp_spiffs.h"
 
 #include "user_config.h"
+#include "user_camera_live.h"
 #include "jerry_run.h"
+
+static uint32_t camera_live_timeout = 0;
+
+/**
+ * Start Camera Live in a task
+ */
+static void camera_task (void *pvParameters)
+{
+  if (!user_camera_live (camera_live_timeout)) {
+    printf("Camera Task failed\n");
+  }
+  sdk_system_restart ();
+} /* camera_task */
 
 /**
  * Start JerryScript in a task
@@ -93,6 +107,61 @@ ssize_t _write_stdout_r (struct _reent *r, int fd, const void *ptr, size_t len)
     return 0;
 }
 #endif
+
+static bool check_camera_live ()
+{
+  esp_spiffs_init();
+  int err = esp_spiffs_mount ();
+  if (err != SPIFFS_OK)
+  {
+    if (err == SPIFFS_ERR_NOT_A_FS)
+    {
+      SPIFFS_unmount (&fs);  // FS must be unmounted before formating
+      if (SPIFFS_format (&fs) == SPIFFS_OK)
+      {
+        printf("Format complete\n");
+      }
+      else
+      {
+        printf("Format failed\n");
+      }
+      esp_spiffs_mount();
+    }
+    else
+    {
+      printf("Error mount SPIFFS\n");
+      while (true) {};
+    }
+  }
+
+  spiffs_file fd = SPIFFS_open (&fs, "live.txt", SPIFFS_O_RDONLY | SPIFFS_O_WRONLY, 0);
+
+  bool ret_value = false;
+  if (!(fd < 0))
+  {
+    const int buf_size = 0xFF;
+    uint8_t buf[buf_size];
+    spiffs_file read_bytes = SPIFFS_read (&fs, fd, buf, buf_size);
+    printf("Read %d bytes\n", read_bytes);
+    if (!(read_bytes < 0))
+    {
+      buf[read_bytes] = '\0';    // zero terminate string
+      camera_live_timeout = atoi ((const char *)buf);
+      printf("Data: %s time: %d\n", buf, camera_live_timeout);
+      ret_value = true;
+
+      close(fd);
+      SPIFFS_remove(&fs, "live.txt");
+    }
+  }
+  else {
+    printf("NO file\n");
+  }
+  SPIFFS_unmount(&fs);
+  esp_spiffs_deinit();
+
+  return ret_value;
+}
 
 static void check_deep_sleep_status ()
 {
@@ -183,7 +252,7 @@ void user_init (void)
 #else
   uart_set_baud (0, 115200);
 #endif
-
+  sdk_system_update_cpu_freq (160);
   check_deep_sleep_status();
 
 #ifdef JERRY_DEBUGGER
@@ -195,13 +264,21 @@ void user_init (void)
 
   sdk_wifi_set_opmode (STATION_MODE);
   sdk_wifi_station_set_config (&config);
-  //sdk_wifi_station_set_auto_connect (0);
   sdk_wifi_station_connect ();
 #endif
 
   BaseType_t xReturned;
   TaskHandle_t xHandle = NULL;
-  xReturned = xTaskCreate (jerry_task, "jerry", JERRY_STACK_SIZE, NULL, 2, &xHandle);
+
+  if (check_camera_live ())
+  {
+    xReturned = xTaskCreate (camera_task, "camera", 1280, NULL, 2, &xHandle);
+  }
+  else
+  {
+    xReturned = xTaskCreate (jerry_task, "jerry", JERRY_STACK_SIZE, NULL, 2, &xHandle);
+  }
+
   if (xReturned != pdPASS)
   {
     printf("Cannot allocate enough memory to task.\n");

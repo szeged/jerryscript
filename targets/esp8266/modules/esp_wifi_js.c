@@ -459,6 +459,120 @@ DELCARE_HANDLER (wifi_receive)
   return result;
 }
 
+/*
+  args[0] address
+  args[1] port
+  args[2] body
+*/
+DELCARE_HANDLER (wifi_post)
+{
+  if (args_cnt != 3)
+  {
+    return raise_argument_count_error (WIFI_OBJECT_NAME, WIFI_RECEIVE, "3");
+  }
+
+  if (!jerry_value_is_string (args_p[0]))
+  {
+    return raise_argument_type_error ("1", TYPE_STRING);
+  }
+
+  if (!jerry_value_is_number (args_p[1]))
+  {
+    return raise_argument_type_error ("2", TYPE_NUMBER);
+  }
+
+  if (!jerry_value_is_string (args_p[2]))
+  {
+    return raise_argument_type_error ("3", TYPE_STRING);
+  }
+
+  jerry_size_t address_req_sz = jerry_get_string_length (args_p[0]);
+  jerry_char_t address_str_buf_p[address_req_sz + 1];
+
+  jerry_string_to_char_buffer (args_p[0], address_str_buf_p, address_req_sz);
+  address_str_buf_p[address_req_sz] = 0;
+
+  jerry_value_t port_string = jerry_value_to_string (args_p[1]);
+  jerry_size_t port_req_sz = jerry_get_string_length (port_string);
+  jerry_char_t port_str_buf_p[port_req_sz + 1];
+
+  jerry_string_to_char_buffer (port_string, port_str_buf_p, port_req_sz);
+  port_str_buf_p[port_req_sz] = 0;
+
+  jerry_release_value (port_string);
+
+  jerry_size_t body_req_sz = jerry_get_string_length (args_p[2]);
+  jerry_char_t body_str_buf_p[body_req_sz + 1];
+
+  jerry_string_to_char_buffer (args_p[2], body_str_buf_p, body_req_sz);
+  body_str_buf_p[body_req_sz] = 0;
+
+  const struct addrinfo hints =
+  {
+      .ai_family = AF_UNSPEC,
+      .ai_socktype = SOCK_STREAM,
+  };
+
+  struct addrinfo *res;
+  int err = getaddrinfo ((const char *) address_str_buf_p, (const char *) port_str_buf_p, &hints, &res);
+
+  if (err != 0 || res == NULL)
+  {
+    if (res)
+    {
+      freeaddrinfo(res);
+    }
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "DNS lookup failed!");
+  }
+
+  struct sockaddr *sa = res->ai_addr;
+
+  if (sa->sa_family == AF_INET)
+  {
+    inet_ntoa (((struct sockaddr_in *) sa)->sin_addr);
+  }
+
+
+  int s = socket (res->ai_family, res->ai_socktype, 0);
+  if (s < 0)
+  {
+    freeaddrinfo (res);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Failed to allocate socket!");
+  }
+
+  if (connect (s, res->ai_addr, res->ai_addrlen) != 0)
+  {
+    close (s);
+    freeaddrinfo (res);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Failed to connect!");
+  }
+
+  freeaddrinfo (res);
+
+  message_buffer = malloc (WIFI_PACKAGE_SIZE);
+
+  if (message_buffer == NULL)
+  {
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "Failed to allocate work buffer.");
+  }
+
+  snprintf ((char *) message_buffer, WIFI_PACKAGE_SIZE, "POST / HTTP/1.0\r\nHost: %s:%s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n\r\n%s",
+           (const char *) address_str_buf_p, port_str_buf_p, body_req_sz, body_str_buf_p);
+
+  printf("%s\n", message_buffer);
+  uint32_t written = write (s, message_buffer, strlen ((char *) message_buffer));
+
+  free (message_buffer);
+  close (s);
+
+  if (written < 0)
+  {
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t * ) "Socket send failed!");
+  }
+
+  return jerry_create_undefined ();
+}
+
 void
 register_wifi_object (jerry_value_t global_object)
 {
@@ -470,6 +584,7 @@ register_wifi_object (jerry_value_t global_object)
   register_native_function (WIFI_AVAILABLE, wifi_available_handler, wifi_object);
   register_native_function (WIFI_SEND, wifi_send_handler, wifi_object);
   register_native_function (WIFI_RECEIVE, wifi_receive_handler, wifi_object);
+  register_native_function (WIFI_POST, wifi_post_handler, wifi_object);
 
   jerry_release_value (wifi_object);
 }

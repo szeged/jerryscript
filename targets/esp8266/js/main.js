@@ -84,6 +84,14 @@ function configUpdateTask(timestamp, jsref) {
     var str = WIFI.receive ("192.168.0.2", 8000, "/config.json");
     var ref = jsref || espScheduler;
     ref.configObj = JSON.parse (str);
+
+    if (ref.configObj.camera_live_interval != 0) {
+      FS.write("timestamp.txt", (new Date()).getTime() + 26 + ref.configObj.camera_live_interval);
+      FS.remove("config.json");
+      FS.remove("tasks.json");
+      WIFI.post ("192.168.0.2", 8001, "camera_live_interval=0&camera_live_interval_unit=hour");
+      uCam.live(ref.configObj.camera_live_interval / 1000);
+    }
     initTasks(jsref);
     ref.actualDate = new Date();
   });
