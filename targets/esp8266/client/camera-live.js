@@ -8,10 +8,14 @@ class ImageProcesser {
     this._imageBuffer = null;
     this._imageBufferData = [];
     this._onGoingDataSize = 0;
+    this._startDate = null;
   }
 
   set imageSize(data) {
     this._imageSize = parseInt(data.toString(), 16);
+    if (this._startDate === null) {
+      this._startDate = new Date();
+    }
     console.log (this._imageSize);
   }
 
@@ -21,8 +25,12 @@ class ImageProcesser {
     }
     this._imageBufferData[0] = data;
 
-    this._onGoingDataSize = data.length;
-    console.log ("first image data: " + data.length);
+    if (data.length == this._imageSize) {
+      this.processImage();
+    } else {
+      this._onGoingDataSize = data.length;
+      console.log ("first image data: " + data.length);
+    }
   }
 
   get onGoingDataSend() {
@@ -49,14 +57,21 @@ class ImageProcesser {
     while (str.length < (size || 2)) {
       str = "0" + str;
     }
-    return str;
+
+    var dirName = './live_pictures/' + this._startDate.toISOString().replace(/[\:\.\-\T]/g, "_").slice(0, -5);
+
+    if (!fs.existsSync(dirName)) {
+      fs.mkdir(dirName);
+    }
+
+    return dirName + '/pic_' + str + '.jpg';
   }
 
   processImage() {
     console.log("proc image")
     this._imageBuffer = Buffer.concat (this._imageBufferData, this._imageSize);
     console.log (this._imageSize, this._imageBuffer);
-    var wstream = fs.createWriteStream('./live_pictures/pic_' + this.idString(4) + '.jpg');
+    var wstream = fs.createWriteStream(this.idString(4), {});
     wstream.write(this._imageBuffer);
     wstream.end();
     this.reset();
@@ -68,6 +83,10 @@ class ImageProcesser {
     this._imageBufferData = [];
     this._onGoingDataSize = 0;
   }
+
+  resetDate() {
+    this._startDate = null;
+  }
 }
 
 var server = net.createServer(function(socket) {
@@ -78,7 +97,6 @@ var server = net.createServer(function(socket) {
 
   socket.on('error', function(err) {
     console.log('[ERROR] ' + err + ' on client_ID: ' + socket.id);
-    delete clients[socket.id];
     socket.end();
   });
 }).listen(5010);
@@ -90,7 +108,6 @@ const messageType = {
 }
 
 function parseData(imageProcesser, data, socket) {
-  //console.log(data[0], data.length);
 
   if (imageProcesser.onGoingDataSend) {
     imageProcesser.appendData(data);
@@ -103,14 +120,17 @@ function parseData(imageProcesser, data, socket) {
       break;
     }
     case messageType.closeConnection: {
-      throw Error ('TODO');
+      socket.end();
+      console.log ('socket closed');
+      imageProcesser.resetDate();
+      break;
     }
     case messageType.imageBuffer: {
       imageProcesser.imageBuffer = data.slice(1);
       break;
     }
     default: {
-      throw Error ('f');
+      throw Error ('Unexpected message');
     }
   }
 }
