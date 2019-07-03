@@ -371,6 +371,8 @@ typedef enum {
   MSG_TYPE_CLOSE_CONN = 3,
 } message_type_t;
 
+#define SOCKET_SEND_ATTEMPT_MAX 5
+
 static bool send_image_size (uint32_t size, netconn_t conn)
 {
   char buff[8] = {0};
@@ -378,7 +380,16 @@ static bool send_image_size (uint32_t size, netconn_t conn)
   *buff = MSG_TYPE_IMAGE_SIZE;
   itoa ((int) size, buff + 1, 16);
   uint8_t num_of_digits = strlen (buff + 1);
-  err_t result = netconn_write (conn, buff, num_of_digits + 1, NETCONN_COPY);
+
+  err_t result = -1;
+  int attempts = 0;
+  do {
+    result = netconn_write (conn, buff, num_of_digits + 1, NETCONN_COPY);
+    if (result == ERR_OK) {
+      break;
+    }
+    delay_millies(25);
+  } while (attempts++ < SOCKET_SEND_ATTEMPT_MAX);
 
   return result == ERR_OK;
 }
@@ -386,14 +397,30 @@ static bool send_image_size (uint32_t size, netconn_t conn)
 static bool send_image(uint8_t *data_p, uint32_t size, netconn_t conn)
 {
   *data_p = MSG_TYPE_IMAGE_DATA;
-  err_t result = netconn_write (conn, data_p, size + 1, NETCONN_COPY);
+  err_t result = -1;
+  int attempts = 0;
+  do {
+    result = netconn_write (conn, data_p, size + 1, NETCONN_COPY);
+    if (result == ERR_OK) {
+      break;
+    }
+    delay_millies(25);
+  } while (attempts++ < SOCKET_SEND_ATTEMPT_MAX);
   return result == ERR_OK;
 }
 
 static bool send_close_connection(netconn_t conn, message_type_t reason)
 {
   char buff[] = {reason, 0, 0, 0};
-  err_t result = netconn_write (conn, buff, sizeof(buff), NETCONN_COPY);
+  err_t result = -1;
+  int attempts = 0;
+  do {
+    result = netconn_write (conn, buff, sizeof(buff), NETCONN_COPY);
+    if (result == ERR_OK) {
+      break;
+    }
+    delay_millies(25);
+  } while (attempts++ < SOCKET_SEND_ATTEMPT_MAX);
   return result == ERR_OK;
 }
 

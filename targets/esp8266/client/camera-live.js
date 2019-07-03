@@ -61,7 +61,7 @@ class ImageProcesser {
     var dirName = './live_pictures/' + this._startDate.toISOString().replace(/[\:\.\-\T]/g, "_").slice(0, -5);
 
     if (!fs.existsSync(dirName)) {
-      fs.mkdir(dirName);
+      fs.mkdirSync(dirName, { resursive : true});
     }
 
     return dirName + '/pic_' + str + '.jpg';
