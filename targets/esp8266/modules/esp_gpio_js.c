@@ -79,7 +79,7 @@ void register_gpio_object (jerry_value_t global_object)
 
   register_number_to_object (GPIO_HIGH, GPIO_HIGH_OR_OUTPUT, gpio_object);
   register_number_to_object (GPIO_LOW, GPIO_LOW_OR_INPUT, gpio_object);
-  register_number_to_object (GPIO_OUTPUT, GPIO_HIGH_OR_OUTPUT, gpio_object);
+  register_number_to_object (GPIO_OUTPUT_JS, GPIO_HIGH_OR_OUTPUT, gpio_object);
   register_number_to_object (GPIO_INPUT, GPIO_LOW_OR_INPUT, gpio_object);
 
   jerry_release_value (gpio_object);

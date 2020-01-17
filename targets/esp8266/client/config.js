@@ -1,5 +1,4 @@
 var http = require('http');
-var formidable = require('formidable');
 var fs = require('fs');
 var querystring = require('querystring');
 

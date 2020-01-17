@@ -1,6 +1,7 @@
 #ifndef ESP_INTERFACES_JS_H
 #define ESP_INTERFACES_JS_H
 
+#include "esp_arducam_js.h"
 #include "esp_gpio_js.h"
 #include "esp_delay_js.h"
 #include "esp_sd_card_js.h"

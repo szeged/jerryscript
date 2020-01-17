@@ -10,7 +10,7 @@
 #define GPIO_PIN_MODE "pinMode"
 #define GPIO_HIGH "HIGH"
 #define GPIO_LOW "LOW"
-#define GPIO_OUTPUT "OUTPUT"
+#define GPIO_OUTPUT_JS "OUTPUT"
 #define GPIO_INPUT "INPUT"
 
 #define GPIO_HIGH_OR_OUTPUT 1

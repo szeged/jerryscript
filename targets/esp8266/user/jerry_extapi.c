@@ -195,6 +195,7 @@ register_js_entries (void)
   register_native_function (GLOBAL_ASSERT, assert_handler, global_object);
   register_native_function (GLOBAL_PRINT, print_handler, global_object);
 
+  register_arducam_object (global_object);
   register_gpio_object (global_object);
   register_sd_card_object (global_object);
   register_fs_object (global_object);
