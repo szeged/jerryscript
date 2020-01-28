@@ -78,6 +78,36 @@
 //   SD.unmount();
 // }
 
+function arducamTask (directoryName) {
+  print ("ArduCAM task Start");
+  SD.mount (15); // TODO what pin to use?
+  if (!configFileBeenStored) {
+    SD.mkdir(directoryName + "_u");
+  }
+  var image_name = directoryName + "_u/" + directoryName + "_pic_u.jpg";
+  if (ArduCAM.init()) {
+    if (ArduCAM.capture(1)) {
+      var fd = SD.open(image_name);
+      if (!ArduCAM.store(fd)) {
+        print("Could not store picture");
+      }
+      SD.close(fd);
+    } else {
+      print("Could not take a picture with ArduCAM");
+    }
+  } else {
+    print("Cannot sync with ArduCAM");
+  }
+
+  if (!configFileBeenStored) {
+    storeConfigFile(directoryName);
+  } else {
+    configFileBeenStored = false;
+  }
+
+  SD.unmount();
+}
+
 // function configUpdateTask(timestamp, jsref) {
 //   print ("GET task Start");
 //   initWifiForTask(function () {
@@ -191,9 +221,18 @@
 //   espScheduler.nextTask();
 // };
 
-ArduCAM.init ();
+try
+{
+  ArduCAM.init ();
+}
+catch (e)
+{
+  print (e);
+}
 
 function sysloop (ticknow) {
-  print (ArduCAM.test ().toString (16));
+  print (ArduCAM.test_spi ().toString (16));
+  print (ArduCAM.test_i2c ().toString (16));
+  // ArduCAM.capture ();
   print ("------");
 }
