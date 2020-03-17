@@ -33,49 +33,50 @@ bool wait (uint32_t timeout)
   return true;
 }
 
-uint8_t read_reg (uint8_t address)
+uint8_t read_reg (uint8_t pin, uint8_t address)
 {
-  spi_cs_low ();
+  spi_cs_low (pin);
   // address is masked with 0b01111111 to make the first bit 0.
   spi_transfer_8 (SPI_BUS, address & 0x7f);
   uint8_t ret = spi_read_byte ();
   // correction for bit rotation from readback
   // ret = (uint8_t)(ret >> 1) | (ret << 7);
-  spi_cs_high ();
+  spi_cs_high (pin);
   return ret;
 }
 
-void write_reg (uint8_t address, uint8_t value)
+void write_reg (uint8_t pin, uint8_t address, uint8_t value)
 {
-  spi_cs_low ();
+  spi_cs_low (pin);
 
   spi_transfer_8 (SPI_BUS, address | 0x80);
   spi_transfer_8 (SPI_BUS, value);
 
-  spi_cs_high ();
+  spi_cs_high (pin);
 }
 
-uint8_t get_bit (uint8_t address, uint8_t bit)
+uint8_t get_bit (uint8_t pin, uint8_t address, uint8_t bit)
 {
-  return read_reg (address) & bit;
+  return read_reg (pin, address) & bit;
 }
 
-void set_bit (uint8_t address, uint8_t bit)
+void set_bit (uint8_t pin, uint8_t address, uint8_t bit)
 {
-  write_reg (address, read_reg (address) | bit);
+  write_reg (pin, address, read_reg (pin, address) | bit);
 }
 
-void clear_bit (uint8_t address, uint8_t bit)
+void clear_bit (uint8_t pin, uint8_t address, uint8_t bit)
 {
-  write_reg (address, read_reg (address) & (~bit));
+  write_reg (pin, address, read_reg (pin, address) & (~bit));
 }
 
 uint32_t read_fifo_length ()
 {
   uint32_t len1, len2, len3, length = 0;
-  len1 = read_reg (REG_FIFO_SIZE1);
-  len2 = read_reg (REG_FIFO_SIZE2);
-  len3 = read_reg (REG_FIFO_SIZE3) & 0x7f;
+  spi_cs_high (SD_CS);
+  len1 = read_reg (CAMERA_CS, REG_FIFO_SIZE1);
+  len2 = read_reg (CAMERA_CS, REG_FIFO_SIZE2);
+  len3 = read_reg (CAMERA_CS, REG_FIFO_SIZE3) & 0x7f;
   length = ((len3 << 16) | (len2 << 8) | len1) & 0x07fffff;
   return length;
 }
