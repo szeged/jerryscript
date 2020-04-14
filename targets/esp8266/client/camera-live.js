@@ -9,6 +9,7 @@ class ImageProcesser {
     this._imageBufferData = [];
     this._onGoingDataSize = 0;
     this._startDate = null;
+    this._arducamOnGoingDataSend = false;
   }
 
   set imageSize(data) {
@@ -34,13 +35,14 @@ class ImageProcesser {
   }
 
   get onGoingDataSend() {
-    return this._onGoingDataSize != 0;
+    return this._onGoingDataSize != 0 || this._arducamOnGoingDataSend;
   }
 
   appendData(buff) {
     console.log ("image data: " + buff.length);
     this._onGoingDataSize += buff.length;
     this._imageBufferData.push(buff);
+    console.log(this._onGoingDataSize);
 
     if (this._imageSize == this._onGoingDataSize) {
       this.processImage();
@@ -104,7 +106,8 @@ var server = net.createServer(function(socket) {
 const messageType = {
   imageSize : 0,
   imageBuffer : 1,
-  closeConnection : 2,
+  closeConnection : 3,
+  imageFragment: 4
 }
 
 function parseData(imageProcesser, data, socket) {
@@ -127,6 +130,10 @@ function parseData(imageProcesser, data, socket) {
     }
     case messageType.imageBuffer: {
       imageProcesser.imageBuffer = data.slice(1);
+      break;
+    }
+    case messageType.imageFragment: {
+      imageProcesser._arducamOnGoingDataSend = true;
       break;
     }
     default: {

@@ -115,6 +115,8 @@ void wr_sensor_regs_16_8 (const struct sensor_reg reglist[])
 
   const struct sensor_reg *next = reglist;
 
+  printf ("wr_sensor_regs_16_8\n");
+
   while ((reg_addr != 0xffff) | (reg_val != 0xff))
   {
     // reg_addr = next->reg_addr;

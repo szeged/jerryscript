@@ -235,8 +235,10 @@ catch (e)
 }
 
 function sysloop (ticknow) {
-  print (ArduCAM.test_spi ().toString (16));
-  print (ArduCAM.test_i2c ().toString (16));
-  // ArduCAM.capture ();
+  // print (ArduCAM.test_spi ().toString (16));
+  // print (ArduCAM.test_i2c ().toString (16));
+  // print (ArduCAM.main());
+  ArduCAM.capture ();
+  ArduCAM.send ();
   print ("------");
 }

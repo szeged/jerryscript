@@ -15,6 +15,8 @@
 #define ARDUCAM_INIT            "init"
 #define ARDUCAM_CAPTURE         "capture"
 #define ARDUCAM_STORE           "store"
+#define ARDUCAM_SEND            "send"
+#define ARDUCAM_MAIN            "main"
 
 // Registers and masks
 #define REG_TEST                       0x00
@@ -68,6 +70,16 @@
 #define I2C_SLAVE_ADDR_WRITE           0x78
 #define I2C_SLAVE_ADDR_READ            0x79
 
+// WIFI control
+typedef struct netconn* netconn_t;
+
+#define MAX_CONNECT_ATTEMPTS 100
+
+#define ARDUCAM_LIVE_WIFI_SSID ""
+#define ARDUCAM_LIVE_WIFI_PWD ""
+#define ARDUCAM_LIVE_SERVER_ADDR ""
+#define ARDUCAM_LIVE_SERVER_PORT 5010
+
 // Misc
 #define MS 1000
 #define timeout_expired(start, len) ((uint32_t)(sdk_system_get_time() - (start)) >= (len))
@@ -95,6 +107,20 @@ uint8_t rd_sensor_reg_16_8 (uint16_t regID);
 void init_cam ();
 void set_image_size (enum image_size size);
 void set_raw_size (enum image_size size);
+
+// WIFI control
+typedef struct netconn* netconn_t;
+
+#define MAX_CONNECT_ATTEMPTS 100
+
+#define ARDUCAM_LIVE_WIFI_SSID ""
+#define ARDUCAM_LIVE_WIFI_PWD ""
+#define ARDUCAM_LIVE_SERVER_ADDR ""
+#define ARDUCAM_LIVE_SERVER_PORT 5010
+
+bool initialize_connection_wrapper (netconn_t* conn_p);
+bool sendPicture (netconn_t conn);
+
 
 void register_arducam_object (jerry_value_t global_object);
 

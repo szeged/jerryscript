@@ -1,5 +1,7 @@
 #include "esp_arducam_js.h"
 
+static netconn_t conn;
+
 DELCARE_HANDLER (arducam_init)
 {
   wait (5000 * MS);
@@ -45,7 +47,10 @@ DELCARE_HANDLER (arducam_init)
     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
   }
 
+  clear_bit (CAMERA_CS, REG_TIMING_CONTROL, MASK_LOW_POWER_MODE);
+
   write_reg (CAMERA_CS, REG_MODE, MASK_MCU_MODE);
+  wr_sensor_reg_16_8 (0xff, 0x01);
   uint8_t vid = rd_sensor_reg_16_8 (OV5642_CHIPID_HIGH);
   uint8_t pid = rd_sensor_reg_16_8 (OV5642_CHIPID_LOW);
   printf ("vid: %#x\n", vid);
@@ -60,20 +65,23 @@ DELCARE_HANDLER (arducam_init)
 
   printf ("latire\n");
 
+  initialize_connection_wrapper (&conn);
+
   return jerry_create_boolean (true);
 }
 
 DELCARE_HANDLER (arducam_capture)
 {
-  set_bit (CAMERA_CS, REG_TIMING_CONTROL, MASK_VSYNC_LEVEL & MASK_FIFO_MODE);
+  set_bit (CAMERA_CS, REG_TIMING_CONTROL, MASK_VSYNC_LEVEL);
   // Clear fifo flag.
+  write_reg (CAMERA_CS, REG_FIFO_CONTROL, MASK_CLEAR_CAPTURE_DONE_FLAG);
   write_reg (CAMERA_CS, REG_FIFO_CONTROL, MASK_CLEAR_CAPTURE_DONE_FLAG);
   // Set the picture number to 1.
   write_reg (CAMERA_CS, REG_CAPTURE_CONTROL, 1);
   // Start capture.
   write_reg (CAMERA_CS, REG_FIFO_CONTROL, MASK_START_CAPTURE);
   // Wait until capture is complete.
-  while (!get_bit (CAMERA_CS, REG_TRIG, MASK_CAPTURE_DONE)){wait(10 * MS);}
+  while (!get_bit (CAMERA_CS, REG_TRIG, MASK_CAPTURE_DONE)){/*wait(10 * MS);*/}
 
   printf ("Capture done!\n");
   return jerry_create_undefined ();
@@ -190,6 +198,101 @@ DELCARE_HANDLER(test_i2c)
   return jerry_create_number (high << 8 | low);
 }
 
+DELCARE_HANDLER(arducam_send)
+{
+  return jerry_create_boolean (sendPicture (conn));
+}
+
+// DELCARE_HANDLER(arducam_main)
+// {
+//   /* --------------------- */
+//   /* INIT */
+//   const spi_settings_t settings = {
+//     .mode = SPI_MODE0,
+//     .freq_divider = SPI_FREQ_DIV_8M,
+//     .msb = true, // ???
+//     .endianness = SPI_LITTLE_ENDIAN, // ???
+//     .minimal_pins = false
+//   };
+
+//   int spi_succ = spi_set_settings (SPI_BUS, &settings);
+//   if (!spi_succ)
+//   {
+//     char err_msg[30];
+//     sprintf (err_msg, "SPI init failed, code: %d", spi_succ);
+//     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+//   }
+//   gpio_enable (CAMERA_CS, GPIO_OUTPUT);
+//   gpio_enable (SD_CS, GPIO_OUTPUT);
+//   spi_cs_high (SD_CS);
+
+//   printf ("ameno\n");
+
+//   i2c_set_clock_stretch (I2C_BUS, 10);
+//   int i2c_succ = i2c_init (I2C_BUS, I2C_SCL_PIN, I2C_SDA_PIN, I2C_FREQ_80K);
+//   if (i2c_succ)
+//   {
+//     char err_msg[30];
+//     sprintf (err_msg, "I2C init failed, code: %d", i2c_succ);
+//     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+//   }
+//   printf ("dorime\n");
+
+//   // Check that SPI and I2C interface works correctly.
+//   write_reg (CAMERA_CS, REG_TEST, 0x55);
+//   uint8_t test = read_reg (CAMERA_CS, REG_TEST);
+//   printf ("%#x\n", test);
+//   if (test != 0x55)
+//   {
+//     char err_msg[50];
+//     sprintf (err_msg, "SPI interface error, expected: 0x55, received: %#x", test);
+//     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+//   }
+
+//   uint8_t vid = rd_sensor_reg_16_8 (OV5642_CHIPID_HIGH);
+//   uint8_t pid = rd_sensor_reg_16_8 (OV5642_CHIPID_LOW);
+//   printf ("vid: %#x\n", vid);
+//   printf ("pid: %#x\n", pid);
+//   if (!(vid == 0x56 && pid == 0x42))
+//   {
+//     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "I2C interface error");
+//   }
+
+//   init_cam ();
+//   set_image_size (OV5642_320x240);
+
+//   printf ("latire\n");
+
+//   if (!initialize_connection_wrapper (&conn)) {
+//     printf("Server connection has failed\n");
+//     return false;
+//   }
+
+//   printf ("interimo adapare\n");
+
+//   /* --------------------- */
+//   /* CAPTURE */
+
+//   set_bit (CAMERA_CS, REG_TIMING_CONTROL, MASK_VSYNC_LEVEL);
+//   // Clear fifo flag.
+//   write_reg (CAMERA_CS, REG_FIFO_CONTROL, MASK_CLEAR_CAPTURE_DONE_FLAG);
+//   // Set the picture number to 1.
+//   write_reg (CAMERA_CS, REG_CAPTURE_CONTROL, 1);
+//   // Start capture.
+//   write_reg (CAMERA_CS, REG_FIFO_CONTROL, MASK_START_CAPTURE);
+//   // Wait until capture is complete.
+//   while (!get_bit (CAMERA_CS, REG_TRIG, MASK_CAPTURE_DONE)){/*wait(1 * MS);*/}
+
+//   printf ("Capture done!\n");
+
+//   /* --------------------- */
+//   /* SEND */
+
+//   sendPicture (conn);
+
+//   return jerry_create_undefined ();
+// }
+
 void register_arducam_object (jerry_value_t global_object)
 {
   jerry_value_t arducam_object = jerry_create_object ();
@@ -198,8 +301,10 @@ void register_arducam_object (jerry_value_t global_object)
   register_native_function (ARDUCAM_INIT, arducam_init_handler, arducam_object);
   register_native_function (ARDUCAM_CAPTURE, arducam_capture_handler, arducam_object);
   register_native_function (ARDUCAM_STORE, arducam_store_handler, arducam_object);
+  register_native_function (ARDUCAM_SEND, arducam_send_handler, arducam_object);
   register_native_function ("test_spi", test_spi_handler, arducam_object);
   register_native_function ("test_i2c", test_i2c_handler, arducam_object);
+  // register_native_function (ARDUCAM_MAIN, arducam_main_handler, arducam_object);
 
   jerry_release_value (arducam_object);
 }
