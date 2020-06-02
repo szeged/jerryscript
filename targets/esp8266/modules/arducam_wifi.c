@@ -3,7 +3,7 @@
 static uint8_t *imageBufferStart;
 static uint8_t *imageBuffer;
 static uint32_t imageSize = 0;
-static uint32_t bufSize = 256;
+static uint32_t bufSize = 1024;
 
 static void delay_millies (int ms)
 {
@@ -249,7 +249,10 @@ bool sendPicture (netconn_t conn)
 
   free (imageBufferStart);
 
-  send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
+  if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
+  {
+    printf("could not send close connection message\n");
+  }
   close_connection (conn);
 
   return true;

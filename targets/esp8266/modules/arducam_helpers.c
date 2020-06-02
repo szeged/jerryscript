@@ -1,8 +1,5 @@
 #include "esp_arducam_js.h"
 
-#define pgm_read_byte(x)        (*((char *)x))
-#define pgm_read_word(x)        ( ((*((unsigned char *)x + 1)) << 8) + (*((unsigned char *)x)))
-
 extern const struct sensor_reg ov5642_RAW[];
 extern const struct sensor_reg OV5642_1280x960_RAW[];
 extern const struct sensor_reg OV5642_1920x1080_RAW[];
@@ -20,16 +17,21 @@ extern const struct sensor_reg OV5642_JPEG_Capture_QSXGA[];
 extern const struct sensor_reg OV5642_1080P_Video_setting[];
 extern const struct sensor_reg OV5642_720P_Video_setting[];
 
+#define pgm_read_byte(x)        (*((char *)x))
+#define pgm_read_word(x)        ( ((*((unsigned char *)x + 1)) << 8) + (*((unsigned char *)x)))
+
 bool wait (uint32_t timeout)
 {
-  uint32_t start = sdk_system_get_time ();
-  while (spi_read_byte () != 0xff)
-  {
-    if (timeout_expired (start, timeout))
-    {
-      return false;
-    }
-  }
+  // uint32_t start = sdk_system_get_time ();
+  // while (spi_read_byte () != 0xff)
+  // {
+  //   if (timeout_expired (start, timeout))
+  //   {
+  //     return false;
+  //   }
+  // }
+  // return true;
+  vTaskDelay((timeout / MS) / portTICK_PERIOD_MS);
   return true;
 }
 
@@ -72,8 +74,9 @@ void clear_bit (uint8_t pin, uint8_t address, uint8_t bit)
 
 uint32_t read_fifo_length ()
 {
-  uint32_t len1, len2, len3, length = 0;
-  spi_cs_high (SD_CS);
+  uint8_t len1, len2, len3;
+  uint32_t length = 0;
+  // spi_cs_high (SD_CS);
   len1 = read_reg (CAMERA_CS, REG_FIFO_SIZE1);
   len2 = read_reg (CAMERA_CS, REG_FIFO_SIZE2);
   len3 = read_reg (CAMERA_CS, REG_FIFO_SIZE3) & 0x7f;
@@ -135,7 +138,7 @@ uint8_t rd_sensor_reg_16_8 (uint16_t regID)
     I2C_SLAVE_ADDR_WRITE,
     regID >> 8,
     regID & 0x00ff,
-    I2C_SLAVE_ADDR_READ
+    I2C_SLAVE_ADDR_WRITE
   };
   write_buff_i2c (buff, 3, false);
   i2c_start (I2C_BUS);
@@ -157,7 +160,6 @@ void init_cam ()
   wr_sensor_reg_16_8 (0x3621, 0x10);
   wr_sensor_reg_16_8 (0x3801, 0xb0);
   wr_sensor_reg_16_8 (0x4407, 0x04);
-  wr_sensor_reg_16_8 (0x5888, 0x00);
 }
 
 void set_image_size (enum image_size size)

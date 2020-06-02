@@ -223,7 +223,7 @@ function arducamTask (directoryName) {
 
 try
 {
-  ArduCAM.init ();
+  // ArduCAM.init ();
   // print (ArduCAM.test_spi ().toString (16));
   // print (ArduCAM.test_i2c ().toString (16));
   // ArduCAM.capture ();
@@ -237,8 +237,8 @@ catch (e)
 function sysloop (ticknow) {
   // print (ArduCAM.test_spi ().toString (16));
   // print (ArduCAM.test_i2c ().toString (16));
-  // print (ArduCAM.main());
-  ArduCAM.capture ();
-  ArduCAM.send ();
+  print (ArduCAM.main());
+  // ArduCAM.capture ();
+  // ArduCAM.send ();
   print ("------");
 }

@@ -59,6 +59,12 @@
 #define CAMERA_CS                       2
 #define SD_CS                           0
 
+#define cbi(reg, bitmask) gpio_write(bitmask, 0)
+#define sbi(reg, bitmask) gpio_write(bitmask, 1)
+
+#define regtype volatile uint32_t
+#define regsize uint32_t
+
 #define spi_cs_low(PIN)                   do { gpio_write (PIN, false); } while (0)
 #define spi_cs_high(PIN)                  do { gpio_write (PIN, true); } while (0)
 #define spi_read_byte()                (spi_transfer_8 (SPI_BUS, 0x00))
@@ -95,18 +101,21 @@ enum image_size {
   OV5642_1920x1080,
 };
 
+void initialize_conn();
+
 bool wait (uint32_t timeout);
 uint8_t read_reg (uint8_t pin, uint8_t address);
 void write_reg (uint8_t pin, uint8_t address, uint8_t value);
 uint8_t get_bit (uint8_t pin, uint8_t address, uint8_t bit);
 void set_bit (uint8_t pin, uint8_t address, uint8_t bit);
 void clear_bit (uint8_t pin, uint8_t address, uint8_t bit);
+uint32_t read_fifo_length ();
 void wr_sensor_reg_16_8 (uint16_t regID, uint8_t regDat);
 void wr_sensor_regs_16_8 (const struct sensor_reg reglist[]);
 uint8_t rd_sensor_reg_16_8 (uint16_t regID);
 void init_cam ();
-void set_image_size (enum image_size size);
-void set_raw_size (enum image_size size);
+// void set_image_size (enum image_size size);
+// void set_raw_size (enum image_size size);
 
 // WIFI control
 typedef struct netconn* netconn_t;

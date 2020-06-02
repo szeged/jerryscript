@@ -17,7 +17,7 @@ class ImageProcesser {
     if (this._startDate === null) {
       this._startDate = new Date();
     }
-    console.log (this._imageSize);
+    console.log ("image size: " + this._imageSize);
   }
 
   set imageBuffer(data) {
