@@ -24,7 +24,7 @@ DELCARE_HANDLER(arducam_main)
   if (!spi_succ)
   {
     sprintf (err_msg, "SPI init failed, code: %d", spi_succ);
-    // return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
   }
 
   i2c_set_clock_stretch (I2C_BUS, 10);
@@ -32,7 +32,7 @@ DELCARE_HANDLER(arducam_main)
   if (i2c_succ)
   {
     sprintf (err_msg, "I2C init failed, code: %d", i2c_succ);
-    // return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
   }
 
   write_reg (CAMERA_CS, 0x07, 0x80);
@@ -47,7 +47,7 @@ DELCARE_HANDLER(arducam_main)
   if (test != 0x55)
   {
     sprintf (err_msg, "SPI interface error, expected: 0x55, received: %#x", test);
-    // return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
   }
 
   wr_sensor_reg_16_8 (0xff, 0x01);
@@ -57,7 +57,7 @@ DELCARE_HANDLER(arducam_main)
   printf ("pid: %#x\n", pid);
   if (!(vid == 0x56 && pid == 0x42))
   {
-    // return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "I2C interface error");
+    return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) "I2C interface error");
   }
 
   init_cam ();

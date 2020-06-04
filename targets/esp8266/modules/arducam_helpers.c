@@ -81,7 +81,6 @@ void write_buff_i2c (uint8_t *buff, uint8_t len, bool stop)
   for (uint8_t i = 0; i < len; i++)
   {
     i2c_write (I2C_BUS, buff[i]);
-    // printf("write_buff_i2c: i2c_write(I2C_BUS, %#x): %#x\n", buff[i], i2c_write (I2C_BUS, buff[i]));
   }
   if (stop)
   {
@@ -127,10 +126,9 @@ uint8_t rd_sensor_reg_16_8 (uint16_t regID)
     I2C_SLAVE_ADDR_WRITE,
     regID >> 8,
     regID & 0x00ff,
-    I2C_SLAVE_ADDR_WRITE
+    I2C_SLAVE_ADDR_READ
   };
-  write_buff_i2c (buff, 3, false);
-  i2c_start (I2C_BUS);
+  write_buff_i2c (buff, 3, true);
   write_buff_i2c (buff + 3, 1, false);
   uint8_t ret = i2c_read (I2C_BUS, true);
   i2c_stop (I2C_BUS);
