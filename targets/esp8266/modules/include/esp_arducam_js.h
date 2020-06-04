@@ -12,10 +12,6 @@
 
 // Property names of the ArduCAM js object
 #define ARDUCAM_OBJECT_NAME     "ArduCAM"
-#define ARDUCAM_INIT            "init"
-#define ARDUCAM_CAPTURE         "capture"
-#define ARDUCAM_STORE           "store"
-#define ARDUCAM_SEND            "send"
 #define ARDUCAM_MAIN            "main"
 
 // Registers and masks
@@ -86,10 +82,7 @@ typedef struct netconn* netconn_t;
 #define ARDUCAM_LIVE_SERVER_ADDR ""
 #define ARDUCAM_LIVE_SERVER_PORT 5010
 
-// Misc
-#define MS 1000
-#define timeout_expired(start, len) ((uint32_t)(sdk_system_get_time() - (start)) >= (len))
-
+// Declarations of helpers etc.
 enum image_size {
   OV5642_320x240,
   OV5642_640x480,
@@ -100,8 +93,6 @@ enum image_size {
   OV5642_2592x1944,
   OV5642_1920x1080,
 };
-
-void initialize_conn();
 
 bool wait (uint32_t timeout);
 uint8_t read_reg (uint8_t pin, uint8_t address);
@@ -114,8 +105,7 @@ void wr_sensor_reg_16_8 (uint16_t regID, uint8_t regDat);
 void wr_sensor_regs_16_8 (const struct sensor_reg reglist[]);
 uint8_t rd_sensor_reg_16_8 (uint16_t regID);
 void init_cam ();
-// void set_image_size (enum image_size size);
-// void set_raw_size (enum image_size size);
+void set_image_size (enum image_size size);
 
 // WIFI control
 typedef struct netconn* netconn_t;

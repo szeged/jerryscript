@@ -1,9 +1,9 @@
 #include "jerry_extapi.h"
 
-static uint8_t *imageBufferStart;
-static uint8_t *imageBuffer;
-static uint32_t imageSize = 0;
-static uint32_t bufSize = 1024;
+static uint8_t *image_buffer_start;
+static uint8_t *image_buffer;
+static uint32_t image_size = 0;
+static uint32_t buf_size = 1024;
 
 static void delay_millies (int ms)
 {
@@ -13,8 +13,8 @@ static void delay_millies (int ms)
 static bool wifi_connect (char* ssid, char *pwd)
 {
   struct sdk_station_config config;
-  strcpy((char *) config.ssid, ssid);
-  strcpy((char *) config.password, pwd);
+  strcpy ((char *) config.ssid, ssid);
+  strcpy ((char *) config.password, pwd);
 
   sdk_wifi_set_opmode (STATION_MODE);
   sdk_wifi_station_set_config (&config);
@@ -84,7 +84,7 @@ static void close_connection (netconn_t conn)
 {
   netconn_close (conn);
   netconn_delete (conn);
-  printf("Socket closed\n");
+  printf ("Socket closed\n");
 }
 
 typedef enum {
@@ -166,21 +166,21 @@ static bool send_close_connection (netconn_t conn, message_type_t reason)
   return result == ERR_OK;
 }
 
-bool sendPicture (netconn_t conn)
+bool send_picture (netconn_t conn)
 {
   // Get FIFO size and allocate buffer.
-  imageSize = read_fifo_length ();
-  send_image_size (imageSize, conn);
-  imageBufferStart = (uint8_t*) malloc (bufSize * sizeof (uint8_t)); // Extra byte for package type info
-  if (imageBufferStart == NULL)
+  image_size = read_fifo_length ();
+  send_image_size (image_size, conn);
+  image_buffer_start = (uint8_t*) malloc (buf_size * sizeof (uint8_t)); // Extra byte for package type info
+  if (image_buffer_start == NULL)
   {
     printf ("could not allocate image buffer\n");
     return false;
   }
-  imageBuffer = imageBufferStart + 1;
+  image_buffer = image_buffer_start + 1;
 
-  printf ("sendPicture: imageSize: %d\n", imageSize);
-  printf ("sendPicture: imageBufferStart: %#x\n", (uint32_t)imageBufferStart);
+  printf ("send_picture: image_size: %d\n", image_size);
+  printf ("send_picture: image_buffer_start: %#x\n", (uint32_t) image_buffer_start);
 
   uint32_t image_pos;
   uint8_t temp, temp_last;
@@ -193,13 +193,13 @@ bool sendPicture (netconn_t conn)
   {
     temp_last = temp;
     temp = read_reg (CAMERA_CS, REG_FIFO_SINGLE_READ);
-    // printf ("sendPicture: temp: %#x\n", temp);
+    // printf ("send_picture: temp: %#x\n", temp);
     taskYIELD ();
-    imageBuffer[(image_pos++) % bufSize] = temp;
+    image_buffer[(image_pos++) % buf_size] = temp;
 
-    if (image_pos % bufSize == 0)
+    if (image_pos % buf_size == 0)
     {
-      if (!send_image_fragment (imageBufferStart, bufSize, conn))
+      if (!send_image_fragment (image_buffer_start, buf_size, conn))
       {
         printf ("could not send image fragment\n");
         send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
@@ -209,7 +209,7 @@ bool sendPicture (netconn_t conn)
     }
   }
   spi_cs_high (CAMERA_CS);
-  printf ("sendPicture: image_pos: %d\n", image_pos);
+  printf ("send_picture: image_pos: %d\n", image_pos);
 
   // spi_cs_low (CAMERA_CS);
   // spi_transfer_8 (CAMERA_CS, REG_FIFO_BURST_READ);
@@ -219,13 +219,13 @@ bool sendPicture (netconn_t conn)
   //   temp_last = temp;
   //   temp = spi_read_byte ();
 
-  //   printf ("sendPicture: temp: %#x\n", temp);
+  //   printf ("send_picture: temp: %#x\n", temp);
   //   taskYIELD ();
-  //   imageBuffer[(image_pos++) % bufSize] = temp;
+  //   image_buffer[(image_pos++) % buf_size] = temp;
 
-  //   if (image_pos % bufSize == 0)
+  //   if (image_pos % buf_size == 0)
   //   {
-  //     if (!send_image_fragment (imageBufferStart, bufSize, conn))
+  //     if (!send_image_fragment (image_buffer_start, buf_size, conn))
   //     {
   //       printf ("could not send image fragment\n");
   //       send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
@@ -236,9 +236,9 @@ bool sendPicture (netconn_t conn)
   // }
   // spi_cs_high (CAMERA_CS);
 
-  if (image_pos < imageSize - 1)
+  if (image_pos < image_size - 1)
   {
-    if (!send_image_fragment (imageBufferStart, image_pos % bufSize, conn))
+    if (!send_image_fragment (image_buffer_start, image_pos % buf_size, conn))
     {
       printf ("could not send image fragment\n");
       send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
@@ -247,11 +247,11 @@ bool sendPicture (netconn_t conn)
     }
   }
 
-  free (imageBufferStart);
+  free (image_buffer_start);
 
   if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
   {
-    printf("could not send close connection message\n");
+    printf ("could not send close connection message\n");
   }
   close_connection (conn);
 

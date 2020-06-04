@@ -22,16 +22,7 @@ extern const struct sensor_reg OV5642_720P_Video_setting[];
 
 bool wait (uint32_t timeout)
 {
-  // uint32_t start = sdk_system_get_time ();
-  // while (spi_read_byte () != 0xff)
-  // {
-  //   if (timeout_expired (start, timeout))
-  //   {
-  //     return false;
-  //   }
-  // }
-  // return true;
-  vTaskDelay((timeout / MS) / portTICK_PERIOD_MS);
+  vTaskDelay(timeout / portTICK_PERIOD_MS);
   return true;
 }
 
@@ -98,17 +89,17 @@ void write_buff_i2c (uint8_t *buff, uint8_t len, bool stop)
   }
 }
 
-void wr_sensor_reg_16_8 (uint16_t regID, uint8_t regDat)
+void wr_sensor_reg_16_8 (uint16_t reg_id, uint8_t reg_dat)
 {
   // Write 8 bit value to 16 bit register.
   uint8_t buff[4] = {
     I2C_SLAVE_ADDR_WRITE,
-    regID >> 8,
-    regID & 0x00ff,
-    regDat & 0x00ff
+    reg_id >> 8,
+    reg_id & 0x00ff,
+    reg_dat & 0x00ff
   };
   write_buff_i2c (buff, 4, true);
-  wait(10 * MS);
+  wait(10);
 }
 
 void wr_sensor_regs_16_8 (const struct sensor_reg reglist[])
@@ -122,8 +113,6 @@ void wr_sensor_regs_16_8 (const struct sensor_reg reglist[])
 
   while ((reg_addr != 0xffff) | (reg_val != 0xff))
   {
-    // reg_addr = next->reg_addr;
-    // reg_val = next->reg_val;
     reg_addr = pgm_read_word (&(next->reg_addr));
     reg_val = pgm_read_word (&(next->reg_val));
     wr_sensor_reg_16_8 (reg_addr, reg_val);
@@ -152,10 +141,10 @@ void init_cam ()
 {
   wr_sensor_reg_16_8 (0x3008, 0x80);
   wr_sensor_regs_16_8 (OV5642_QVGA_Preview);
-  wait (200 * MS);
+  wait (200);
   wr_sensor_regs_16_8 (OV5642_JPEG_Capture_QSXGA);
   wr_sensor_regs_16_8 (ov5642_320x240);
-  wait (100 * MS);
+  wait (100);
   wr_sensor_reg_16_8 (0x3818, 0xa8);
   wr_sensor_reg_16_8 (0x3621, 0x10);
   wr_sensor_reg_16_8 (0x3801, 0xb0);

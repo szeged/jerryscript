@@ -221,24 +221,7 @@ function arducamTask (directoryName) {
 //   espScheduler.nextTask();
 // };
 
-try
-{
-  // ArduCAM.init ();
-  // print (ArduCAM.test_spi ().toString (16));
-  // print (ArduCAM.test_i2c ().toString (16));
-  // ArduCAM.capture ();
-  // ArduCAM.store ();
-}
-catch (e)
-{
-  print (e);
-}
-
 function sysloop (ticknow) {
-  // print (ArduCAM.test_spi ().toString (16));
-  // print (ArduCAM.test_i2c ().toString (16));
-  print (ArduCAM.main());
-  // ArduCAM.capture ();
-  // ArduCAM.send ();
-  print ("------");
+  ArduCAM.main();
+  print ("\n------\n");
 }
