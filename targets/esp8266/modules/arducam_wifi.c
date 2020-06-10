@@ -166,11 +166,97 @@ static bool send_close_connection (netconn_t conn, message_type_t reason)
   return result == ERR_OK;
 }
 
+static bool send_image_buffer(uint8_t *data_p, uint32_t size, netconn_t conn)
+{
+  *data_p = MSG_TYPE_IMAGE_DATA;
+  err_t result = -1;
+  int attempts = 0;
+  do {
+    result = netconn_write (conn, data_p, size + 1, NETCONN_COPY);
+    if (result == ERR_OK) {
+      break;
+    }
+    delay_millies(25);
+  } while (attempts++ < SOCKET_SEND_ATTEMPT_MAX);
+  return result == ERR_OK;
+}
+
+// // Original
+// bool send_picture (netconn_t conn)
+// {
+//   // Get FIFO size and allocate buffer.
+//   image_size = read_fifo_length ();
+//   send_image_size (image_size, conn);
+//   image_buffer_start = (uint8_t*) malloc (buf_size * sizeof (uint8_t)); // Extra byte for package type info
+//   if (image_buffer_start == NULL)
+//   {
+//     printf ("could not allocate image buffer\n");
+//     return false;
+//   }
+//   image_buffer = image_buffer_start + 1;
+
+//   printf ("send_picture: image_size: %d\n", image_size);
+//   printf ("send_picture: image_buffer_start: %#x\n", (uint32_t) image_buffer_start);
+
+//   uint32_t image_pos;
+//   uint8_t temp, temp_last;
+//   image_pos = temp = 0;
+
+//   send_image_fragment_flag (conn); // Sending image data begins.
+
+//   spi_cs_low (CAMERA_CS);
+//   // while ((temp != 0xd9) | (temp_last != 0xff))
+//   while (image_pos < image_size)
+//   {
+//     temp_last = temp;
+//     temp = read_reg (CAMERA_CS, REG_FIFO_SINGLE_READ);
+//     printf("%x", temp);
+//     image_buffer[(image_pos++) % buf_size] = temp;
+
+//     if (image_pos % buf_size == 0)
+//     {
+//       printf ("send_picture: image_pos: %d\n", image_pos);
+//       vTaskDelay(100 / portTICK_PERIOD_MS);
+//       if (!send_image_fragment (image_buffer_start, buf_size, conn))
+//       {
+//         printf ("could not send image fragment\n");
+//         send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
+//         close_connection (conn);
+//         return false;
+//       }
+//     }
+//   }
+//   spi_cs_high (CAMERA_CS);
+
+//   printf("send_picture: image_pos: %d, buf_size: %d\n", image_pos, buf_size);
+//   printf("send_picture: sending %d bytes\n", image_pos % buf_size);
+//   if (image_pos % buf_size != 0)
+//   {
+//     if (!send_image_fragment (image_buffer_start, image_pos % buf_size, conn))
+//     {
+//       printf ("could not send image fragment\n");
+//       send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
+//       close_connection (conn);
+//       return false;
+//     }
+//   }
+
+//   free (image_buffer_start);
+//   vTaskDelay(1000 / portTICK_PERIOD_MS);
+//   if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
+//   {
+//     printf ("could not send close connection message\n");
+//   }
+//   close_connection (conn);
+
+//   return true;
+// }
+
+// Workaround
 bool send_picture (netconn_t conn)
 {
   // Get FIFO size and allocate buffer.
   image_size = read_fifo_length ();
-  send_image_size (image_size, conn);
   image_buffer_start = (uint8_t*) malloc (buf_size * sizeof (uint8_t)); // Extra byte for package type info
   if (image_buffer_start == NULL)
   {
@@ -186,20 +272,19 @@ bool send_picture (netconn_t conn)
   uint8_t temp, temp_last;
   image_pos = temp = 0;
 
-  send_image_fragment_flag (conn); // Sending image data begins.
-
   spi_cs_low (CAMERA_CS);
   while ((temp != 0xd9) | (temp_last != 0xff))
   {
     temp_last = temp;
     temp = read_reg (CAMERA_CS, REG_FIFO_SINGLE_READ);
-    // printf ("send_picture: temp: %#x\n", temp);
-    taskYIELD ();
+    printf("%x", temp);
     image_buffer[(image_pos++) % buf_size] = temp;
 
     if (image_pos % buf_size == 0)
     {
-      if (!send_image_fragment (image_buffer_start, buf_size, conn))
+      // printf ("send_picture: image_pos: %d\n", image_pos);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+      if (!send_image_buffer (image_buffer_start, buf_size, conn))
       {
         printf ("could not send image fragment\n");
         send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
@@ -209,36 +294,12 @@ bool send_picture (netconn_t conn)
     }
   }
   spi_cs_high (CAMERA_CS);
-  printf ("send_picture: image_pos: %d\n", image_pos);
 
-  // spi_cs_low (CAMERA_CS);
-  // spi_transfer_8 (CAMERA_CS, REG_FIFO_BURST_READ);
-
-  // while ((temp != 0xd9) | (temp_last != 0xff))
-  // {
-  //   temp_last = temp;
-  //   temp = spi_read_byte ();
-
-  //   printf ("send_picture: temp: %#x\n", temp);
-  //   taskYIELD ();
-  //   image_buffer[(image_pos++) % buf_size] = temp;
-
-  //   if (image_pos % buf_size == 0)
-  //   {
-  //     if (!send_image_fragment (image_buffer_start, buf_size, conn))
-  //     {
-  //       printf ("could not send image fragment\n");
-  //       send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
-  //       close_connection (conn);
-  //       return false;
-  //     }
-  //   }
-  // }
-  // spi_cs_high (CAMERA_CS);
-
-  if (image_pos < image_size - 1)
+  printf("send_picture: image_pos: %d, buf_size: %d\n", image_pos, buf_size);
+  printf("send_picture: sending %d bytes\n", image_pos % buf_size);
+  if (image_pos % buf_size != 0)
   {
-    if (!send_image_fragment (image_buffer_start, image_pos % buf_size, conn))
+    if (!send_image_buffer (image_buffer_start, image_pos % buf_size, conn))
     {
       printf ("could not send image fragment\n");
       send_close_connection (conn, MSG_TYPE_CLOSE_CONN);
@@ -248,7 +309,7 @@ bool send_picture (netconn_t conn)
   }
 
   free (image_buffer_start);
-
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
   if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
   {
     printf ("could not send close connection message\n");

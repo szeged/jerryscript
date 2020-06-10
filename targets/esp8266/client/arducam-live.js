@@ -11,21 +11,29 @@ class ImageProcesser {
     this._startDate = null;
   }
 
-  set imageSize(data) {
-    this._imageSize = parseInt(data.toString(), 16);
-    if (this._startDate === null) {
-      this._startDate = new Date();
-    }
-    console.log (this._imageSize);
+  // set imageSize(data) {
+  //   this._imageSize = parseInt(data.toString(), 16);
+  //   if (this._startDate === null) {
+  //     this._startDate = new Date();
+  //   }
+  //   console.log ("image size: " + this._imageSize);
+  // }
+
+  jpegEndReceived() {
+    var final_buff = this._imageBufferData[this._imageBufferData.length - 1];
+    return final_buff[final_buff.length - 2] == 0xff && final_buff[final_buff.length - 1] == 0xd9;
   }
 
   set imageBuffer(data) {
-    if (this._imageSize == 0) {
-      throw Error('Missing imageSize');
+    if (this._startDate === null) {
+      this._startDate = new Date();
     }
+    // if (this._imageSize == 0) {
+    //   throw Error('Missing imageSize');
+    // }
     this._imageBufferData[0] = data;
 
-    if (data.length == this._imageSize) {
+    if (this.jpegEndReceived()) {
       this.processImage();
     } else {
       this._onGoingDataSize = data.length;
@@ -41,15 +49,16 @@ class ImageProcesser {
     console.log ("image data: " + buff.length);
     this._onGoingDataSize += buff.length;
     this._imageBufferData.push(buff);
+    console.log("_onGoingDataSize: " + this._onGoingDataSize);
 
-    if (this._imageSize == this._onGoingDataSize) {
+    if (this.jpegEndReceived()) {
       this.processImage();
     }
 
-    if (this._onGoingDataSize > this._imageSize) {
-      console.log('err');
-      this.reset();
-    }
+    // if (this._onGoingDataSize > this._imageSize) {
+    //   console.log('err');
+    //   this.reset();
+    // }
   }
 
   idString(size) {
@@ -69,7 +78,7 @@ class ImageProcesser {
 
   processImage() {
     console.log("proc image")
-    this._imageBuffer = Buffer.concat (this._imageBufferData, this._imageSize);
+    this._imageBuffer = Buffer.concat (this._imageBufferData);
     console.log (this._imageSize, this._imageBuffer);
     var wstream = fs.createWriteStream(this.idString(4), {});
     wstream.write(this._imageBuffer);
@@ -104,21 +113,21 @@ var server = net.createServer(function(socket) {
 const messageType = {
   imageSize : 0,
   imageBuffer : 1,
-  closeConnection : 2,
+  closeConnection : 3,
 }
 
 function parseData(imageProcesser, data, socket) {
 
   if (imageProcesser.onGoingDataSend) {
-    imageProcesser.appendData(data);
+    imageProcesser.appendData(data.slice(1));
     return;
   }
 
   switch (data[0]) {
-    case messageType.imageSize: {
-      imageProcesser.imageSize = data.slice(1);
-      break;
-    }
+    // case messageType.imageSize: {
+    //   imageProcesser.imageSize = data.slice(1);
+    //   break;
+    // }
     case messageType.closeConnection: {
       socket.end();
       console.log ('socket closed');
@@ -126,9 +135,14 @@ function parseData(imageProcesser, data, socket) {
       break;
     }
     case messageType.imageBuffer: {
+      console.log('imgBuffer')
       imageProcesser.imageBuffer = data.slice(1);
       break;
     }
+    // case messageType.imageFragment: {
+    //   imageProcesser._arducamOnGoingDataSend = true;
+    //   break;
+    // }
     default: {
       throw Error ('Unexpected message');
     }

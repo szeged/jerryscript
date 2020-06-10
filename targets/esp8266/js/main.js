@@ -221,6 +221,12 @@ function arducamTask (directoryName) {
 //   espScheduler.nextTask();
 // };
 
+try {
+  ArduCAM.init ();
+} catch (e) {
+  print (e);
+}
+
 function sysloop (ticknow) {
   ArduCAM.main();
   print ("\n------\n");

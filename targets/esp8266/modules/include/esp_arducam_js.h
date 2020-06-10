@@ -12,6 +12,7 @@
 
 // Property names of the ArduCAM js object
 #define ARDUCAM_OBJECT_NAME     "ArduCAM"
+#define ARDUCAM_INIT            "init"
 #define ARDUCAM_MAIN            "main"
 
 // Registers and masks
@@ -72,16 +73,6 @@
 #define I2C_SLAVE_ADDR_WRITE           0x78
 #define I2C_SLAVE_ADDR_READ            0x79
 
-// WIFI control
-typedef struct netconn* netconn_t;
-
-#define MAX_CONNECT_ATTEMPTS 100
-
-#define ARDUCAM_LIVE_WIFI_SSID ""
-#define ARDUCAM_LIVE_WIFI_PWD ""
-#define ARDUCAM_LIVE_SERVER_ADDR ""
-#define ARDUCAM_LIVE_SERVER_PORT 5010
-
 // Declarations of helpers etc.
 enum image_size {
   OV5642_320x240,
@@ -118,7 +109,7 @@ typedef struct netconn* netconn_t;
 #define ARDUCAM_LIVE_SERVER_PORT 5010
 
 bool initialize_connection_wrapper (netconn_t* conn_p);
-bool sendPicture (netconn_t conn);
+bool send_picture (netconn_t conn);
 
 
 void register_arducam_object (jerry_value_t global_object);

@@ -2,10 +2,10 @@
 
 #define MAX_FIFO_SIZE 0x7ffff // 8M
 
-// static netconn_t conn;
+static netconn_t conn;
 static char err_msg[255];
 
-DELCARE_HANDLER(arducam_main)
+DELCARE_HANDLER(arducam_init)
 {
   /* --------------------- */
   /* INIT */
@@ -62,6 +62,15 @@ DELCARE_HANDLER(arducam_main)
 
   init_cam ();
 
+  if (!initialize_connection_wrapper (&conn)) {
+    printf ("Server connection has failed\n");
+  }
+
+  return jerry_create_undefined ();
+}
+
+DELCARE_HANDLER(arducam_main)
+{
   /* --------------------- */
   /* CAPTURE */
   write_reg (CAMERA_CS, REG_TIMING_CONTROL, MASK_VSYNC_LEVEL);
@@ -87,8 +96,6 @@ DELCARE_HANDLER(arducam_main)
   /* SEND */
   uint32_t image_size = read_fifo_length ();
   printf ("image_size: %d\n", image_size);
-  uint8_t temp, temp_last;
-  temp = temp_last = 0;
 
   if (image_size >= MAX_FIFO_SIZE) //8M
   {
@@ -101,30 +108,28 @@ DELCARE_HANDLER(arducam_main)
     return jerry_create_error (JERRY_ERROR_COMMON, (const jerry_char_t *) err_msg);
   }
 
-  spi_cs_low (CAMERA_CS);
-  spi_transfer_8 (SPI_BUS, REG_FIFO_BURST_READ);
+  // uint8_t temp, temp_last;
+  // temp = temp_last = 0;
 
-  while ( image_size-- )
-  {
-      temp_last = temp;
-      temp = spi_transfer_8 (SPI_BUS, 0x00);
+  // spi_cs_low (CAMERA_CS);
+  // spi_transfer_8 (SPI_BUS, REG_FIFO_BURST_READ);
 
-      printf("%02x", temp);
+  // while ( image_size-- )
+  // {
+  //     temp_last = temp;
+  //     temp = spi_transfer_8 (SPI_BUS, 0x00);
 
-      if ( (temp == 0xD9) && (temp_last == 0xFF) ) //If find the end ,break while,
-      {
-          spi_cs_high (CAMERA_CS);
-          break;
-      }
-  }
+  //     printf("%02x", temp);
 
-  spi_cs_high (CAMERA_CS);
-
-  // if (!initialize_connection_wrapper (&conn)) {
-  //   printf ("Server connection has failed\n");
+  //     if ( (temp == 0xD9) && (temp_last == 0xFF) ) //If find the end ,break while,
+  //     {
+  //         spi_cs_high (CAMERA_CS);
+  //         break;
+  //     }
   // }
+  // spi_cs_high (CAMERA_CS);
 
-  // sendPicture (conn);
+  send_picture (conn);
 
   return jerry_create_undefined ();
 }
@@ -134,6 +139,7 @@ void register_arducam_object (jerry_value_t global_object)
   jerry_value_t arducam_object = jerry_create_object ();
   register_js_value_to_object (ARDUCAM_OBJECT_NAME, arducam_object, global_object);
 
+  register_native_function (ARDUCAM_INIT, arducam_init_handler, arducam_object);
   register_native_function (ARDUCAM_MAIN, arducam_main_handler, arducam_object);
 
   jerry_release_value (arducam_object);
