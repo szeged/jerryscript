@@ -243,6 +243,7 @@ static void check_deep_sleep_status ()
  */
 void user_init (void)
 {
+  PIN_FUNC_SELECT (PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
 #if REDIRECT_STDOUT == 1
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
   uart_set_baud (1, 115200);

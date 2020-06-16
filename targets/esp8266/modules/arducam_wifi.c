@@ -3,7 +3,7 @@
 static uint8_t *image_buffer_start;
 static uint8_t *image_buffer;
 static uint32_t image_size = 0;
-static uint32_t buf_size = 1024;
+static uint32_t buf_size = ARDUCAM_BUFF_SIZE;
 
 static void delay_millies (int ms)
 {

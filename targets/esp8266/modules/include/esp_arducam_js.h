@@ -4,6 +4,7 @@
 #include "jerry_extapi.h"
 #include <esp/spi.h>
 #include <esp/gpio.h>
+#include <fatfs/ff.h>
 #include <i2c/i2c.h>
 #include <espressif/esp8266/gpio_register.h>
 #include <espressif/esp8266/pin_mux_register.h>
@@ -13,7 +14,13 @@
 // Property names of the ArduCAM js object
 #define ARDUCAM_OBJECT_NAME     "ArduCAM"
 #define ARDUCAM_INIT            "init"
-#define ARDUCAM_MAIN            "main"
+#define ARDUCAM_CAPTURE         "capture"
+#define ARDUCAM_STORE           "store"
+#define ARDUCAM_SEND            "send"
+#define ARDUCAM_PRINT           "print"
+#define ARDUCAM_SD_CS           "SD_CS"
+
+#define ARDUCAM_BUFF_SIZE              128
 
 // Registers and masks
 #define REG_TEST                       0x00
@@ -54,7 +61,7 @@
 // SPI control
 #define SPI_BUS                         1
 #define CAMERA_CS                       2
-#define SD_CS                           0
+#define SD_CS                           16
 
 #define cbi(reg, bitmask) gpio_write(bitmask, 0)
 #define sbi(reg, bitmask) gpio_write(bitmask, 1)

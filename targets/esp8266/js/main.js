@@ -228,6 +228,20 @@ try {
 }
 
 function sysloop (ticknow) {
-  ArduCAM.main();
+  try {
+    ArduCAM.capture ();
+  } catch (e) {
+    print (e)
+  }
+  try {
+    SD.mount(ArduCAM.SD_CS);
+    var fd = SD.open("temp.jpg", SD.createEmptyForWrite);
+    ArduCAM.store (fd);
+    SD.close(fd);
+    SD.unmount();
+    while(true) {print("done")}
+  } catch (e) {
+    print (e)
+  }
   print ("\n------\n");
 }

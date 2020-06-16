@@ -147,6 +147,8 @@ void init_cam ()
   wr_sensor_reg_16_8 (0x3621, 0x10);
   wr_sensor_reg_16_8 (0x3801, 0xb0);
   wr_sensor_reg_16_8 (0x4407, 0x04);
+  wr_sensor_reg_16_8 (0x5888, 0x00);
+  wr_sensor_reg_16_8 (0x5000, 0xFF);
 }
 
 void set_image_size (enum image_size size)
