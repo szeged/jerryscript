@@ -16,7 +16,6 @@
 #define ARDUCAM_INIT            "init"
 #define ARDUCAM_CAPTURE         "capture"
 #define ARDUCAM_STORE           "store"
-#define ARDUCAM_SEND            "send"
 #define ARDUCAM_PRINT           "print"
 #define ARDUCAM_SD_CS           "SD_CS"
 

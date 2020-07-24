@@ -78,35 +78,35 @@
 //   SD.unmount();
 // }
 
-function arducamTask (directoryName) {
-  print ("ArduCAM task Start");
-  SD.mount (15); // TODO what pin to use?
-  if (!configFileBeenStored) {
-    SD.mkdir(directoryName + "_u");
-  }
-  var image_name = directoryName + "_u/" + directoryName + "_pic_u.jpg";
-  if (ArduCAM.init()) {
-    if (ArduCAM.capture(1)) {
-      var fd = SD.open(image_name);
-      if (!ArduCAM.store(fd)) {
-        print("Could not store picture");
-      }
-      SD.close(fd);
-    } else {
-      print("Could not take a picture with ArduCAM");
-    }
-  } else {
-    print("Cannot sync with ArduCAM");
-  }
+// function arducamTask (directoryName) {
+//   print ("ArduCAM task Start");
+//   SD.mount (15); // TODO what pin to use?
+//   if (!configFileBeenStored) {
+//     SD.mkdir(directoryName + "_u");
+//   }
+//   var image_name = directoryName + "_u/" + directoryName + "_pic_u.jpg";
+//   if (ArduCAM.init()) {
+//     if (ArduCAM.capture(1)) {
+//       var fd = SD.open(image_name);
+//       if (!ArduCAM.store(fd)) {
+//         print("Could not store picture");
+//       }
+//       SD.close(fd);
+//     } else {
+//       print("Could not take a picture with ArduCAM");
+//     }
+//   } else {
+//     print("Cannot sync with ArduCAM");
+//   }
 
-  if (!configFileBeenStored) {
-    storeConfigFile(directoryName);
-  } else {
-    configFileBeenStored = false;
-  }
+//   if (!configFileBeenStored) {
+//     storeConfigFile(directoryName);
+//   } else {
+//     configFileBeenStored = false;
+//   }
 
-  SD.unmount();
-}
+//   SD.unmount();
+// }
 
 // function configUpdateTask(timestamp, jsref) {
 //   print ("GET task Start");
@@ -233,15 +233,16 @@ function sysloop (ticknow) {
   } catch (e) {
     print (e)
   }
-  try {
-    SD.mount(ArduCAM.SD_CS);
-    var fd = SD.open("temp.jpg", SD.createEmptyForWrite);
-    ArduCAM.store (fd);
-    SD.close(fd);
-    SD.unmount();
-    while(true) {print("done")}
-  } catch (e) {
-    print (e)
-  }
+  ArduCAM.print ();
+  // try {
+  //   SD.mount(ArduCAM.SD_CS);
+  //   var fd = SD.open("temp.jpg", SD.createEmptyForWrite);
+  //   ArduCAM.store (fd);
+  //   SD.close(fd);
+  //   SD.unmount();
+  //   while(true) {print("done")}
+  // } catch (e) {
+  //   print (e)
+  // }
   print ("\n------\n");
 }

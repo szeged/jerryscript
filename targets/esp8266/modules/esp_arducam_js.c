@@ -102,13 +102,6 @@ DELCARE_HANDLER(arducam_capture)
   return jerry_create_undefined ();
 }
 
-DELCARE_HANDLER(arducam_send)
-{
-  send_picture (conn);
-
-  return jerry_create_undefined ();
-}
-
 DELCARE_HANDLER(arducam_print)
 {
   uint8_t temp, temp_last;
@@ -246,7 +239,6 @@ void register_arducam_object (jerry_value_t global_object)
   register_native_function (ARDUCAM_INIT, arducam_init_handler, arducam_object);
   register_native_function (ARDUCAM_CAPTURE, arducam_capture_handler, arducam_object);
   register_native_function (ARDUCAM_STORE, arducam_store_handler, arducam_object);
-  register_native_function (ARDUCAM_SEND, arducam_send_handler, arducam_object);
   register_native_function (ARDUCAM_PRINT, arducam_print_handler, arducam_object);
 
   jerry_value_t sd_cs_val = jerry_create_number (SD_CS);

@@ -50,9 +50,9 @@ static uint32_t camera_live_timeout = 0;
 /**
  * Start Camera Live in a task
  */
-static void camera_task (void *pvParameters)
+static void ucam_live_task (void *pvParameters)
 {
-  if (!user_camera_live (camera_live_timeout)) {
+  if (!user_ucam_live (camera_live_timeout)) {
     printf("Camera Task failed\n");
   }
   sdk_system_restart ();
@@ -274,7 +274,8 @@ void user_init (void)
 
   if (check_camera_live ())
   {
-    xReturned = xTaskCreate (camera_task, "camera", 1280, NULL, 2, &xHandle);
+    // TODO in check_camera_live, check for arducam, and create the task accordingly
+    xReturned = xTaskCreate (ucam_live_task, "ucam_live", 1280, NULL, 2, &xHandle);
   }
   else
   {
