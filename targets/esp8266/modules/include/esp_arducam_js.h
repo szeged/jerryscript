@@ -91,7 +91,7 @@ enum image_size {
   OV5642_1920x1080,
 };
 
-bool wait (uint32_t timeout);
+void wait (uint32_t timeout);
 uint8_t read_reg (uint8_t pin, uint8_t address);
 void write_reg (uint8_t pin, uint8_t address, uint8_t value);
 uint8_t get_bit (uint8_t pin, uint8_t address, uint8_t bit);
