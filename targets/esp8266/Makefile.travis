@@ -30,10 +30,6 @@ install-apt-get-deps:
 
 
 # Fetch and build crosstool-NG with support for Xtensa.
-install-xtensa-kx106-gcc:
-	wget https://dl.espressif.com/dl/xtensa-lx106-elf-linux64-1.22.0-88-gde0bdc1-4.8.5.tar.gz -O ../xtensa-lx106-elf-linux64-1.22.0-88-gde0bdc1-4.8.5.tar.gz
-	cd .. && tar xvfz xtensa-lx106-elf-linux64-1.22.0-88-gde0bdc1-4.8.5.tar.gz
-
 install-esp-open-sdk:
 	git clone --recursive https://github.com/pfalcon/esp-open-sdk.git ../esp-open-sdk
 	cd ../esp-open-sdk && git checkout 5518fb6116c35a02ccb9a87260bb194a57cb429e

@@ -32,12 +32,29 @@ var message_state = {
   fail : 1,
   success :2
 }
-var default_value = JSON.stringify ({get_interval : 10 * 1000 * 60,
-                                    pic_interval : 10 * 1000 * 60,
-                                    measure_interval : 10 * 1000 * 60,
-                                    data_send_interval : 1000 * 60 * 60,
-                                    camera_live_interval : 0,
-                                    delete_after_send : true});
+
+var image_size_map = {
+  "-": 0,
+  "320x240": 1,
+  "640x480": 2,
+  "1024x768": 3,
+  "1280x960": 4,
+  "1600x1200": 5,
+  "1920x1080": 6,
+  "2048x1536": 7,
+  "2592x1944": 8
+}
+
+var default_value = JSON.stringify ({
+                                      camera_type: "ArduCAM",
+                                      image_size: image_size_map["320x240"],
+                                      get_interval : 10 * 1000 * 60,
+                                      pic_interval : 10 * 1000 * 60,
+                                      measure_interval : 10 * 1000 * 60,
+                                      data_send_interval : 1000 * 60 * 60,
+                                      camera_live_interval : 0,
+                                      delete_after_send : true
+                                    });
 
 var cssFileName = "bootstrap.min.css";
 var configFileName = "config.json";
@@ -78,6 +95,23 @@ http.createServer(function (request, response) {
               skip_unit = false;
               continue;
             }
+            if (key == "camera_type") {
+              actualConfig[key] = value;
+              continue;
+            }
+            if (key == "image_size") {
+              var is_empty = value.startsWith('-');
+              var is_arducam = actualConfig["camera_type"] == "ArduCAM";
+              if (is_arducam == is_empty)
+              {
+                // We have ArduCAM and empty image size or uCam and non-empty image size
+                popup_message = message_state.fail;
+                break;
+              }
+              actualConfig[key] = image_size_map[is_empty ? '-' : value];
+              continue;
+            }
+
             var splitted = key.split("_unit");
             if (actualConfig.hasOwnProperty(splitted[0])){
               if (splitted.length == 1){
@@ -179,6 +213,26 @@ http.createServer(function (request, response) {
             response.write('<h1>ESP8266 config page</h1>');
             response.write(
             '<form action="" method="POST" role="form">' +
+              '<div class="form-group">' +
+                '<label class= "control-label col-md-5">Camera type</label>' +
+                '<div class="input-group col-md-7">' +
+                  '<select class="form-control" style="margin-right: 20;" name="camera_type">' +
+                    '<option>ArduCAM</option>' +
+                    '<option>uCam-III</option>' +
+                  '</select>' +
+                  '<select class="form-control" name="image_size">' +
+                    '<option>---------</option>' +
+                    '<option>320x240</option>' +
+                    '<option>640x480</option>' +
+                    '<option>1024x768</option>' +
+                    '<option>1280x960</option>' +
+                    '<option>1600x1200</option>' +
+                    '<option>1920x1080</option>' +
+                    '<option>2048x1536</option>' +
+                    '<option>2592x1944</option>' +
+                  '</select>' +
+                '</div>' +
+              '</div>' +
               '<div class="form-group">' +
                 '<label class= "control-label col-md-5">Config update interval</label>' +
                 '<div class="input-group col-md-7">' +

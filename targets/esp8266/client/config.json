@@ -1,1 +1,1 @@
-{"get_interval":600000,"pic_interval":600000,"measure_interval":600000,"data_send_interval":3600000,"camera_live_interval":3600000,"delete_after_send":false}
+{"camera_type":"ArduCAM","image_size":1,"get_interval":10000,"pic_interval":10000,"measure_interval":3600000,"data_send_interval":3600000,"camera_live_interval":30000,"delete_after_send":false}

@@ -38,8 +38,6 @@ static const char* fn_sys_loop_name = "sysloop";
  */
 static inline void revert_resource_name (const char* name, jerry_char_t* resource_name, jerry_size_t resource_name_length)
 {
-  union { double d; unsigned u; } now = { .d = jerry_port_get_current_time () };
-  srand (now.u);
   strncpy ((char*) resource_name, name, resource_name_length);
   resource_name[resource_name_length + 2] = 's';
   resource_name[resource_name_length + 1] = 'j';
@@ -114,26 +112,49 @@ bool jerry_task_init (void)
 bool parse_resource (const char *name, const char *source, const int length)
 {
   jerry_size_t resource_name_length = strlen (name);
-  jerry_char_t resource_name[resource_name_length + 3];
+  jerry_char_t resource_name[resource_name_length + 4];
 
   revert_resource_name (name, resource_name, resource_name_length);
+  resource_name[resource_name_length + 3] = '\0';
 
   jerry_value_t res = jerry_parse (resource_name,
                                   resource_name_length + 3,
                                   (jerry_char_t *) source,
                                   length,
-                                  false);
+                                  JERRY_PARSE_NO_OPTS);
+
+  bool ret = false;
 
   if (!jerry_value_is_error (res))
   {
+    ret = true;
     jerry_value_t func_val = res;
     res = jerry_run (func_val);
+    if (jerry_value_is_error (res))
+    {
+      ret = false;
+      jerry_value_t error_value = jerry_get_value_from_error (res, true);
+      if (jerry_value_is_null (error_value))
+      {
+        printf ("Out of memory while running %s\n", resource_name);
+      }
+      jerry_error_t error_type = jerry_get_error_type (res);
+      printf ("Error while running %s, error type: %d\n", resource_name, error_type);
+    }
     jerry_release_value (func_val);
+  }
+  else
+  {
+    jerry_value_t error_value = jerry_get_value_from_error (res, true);
+    if (jerry_value_is_null (error_value))
+    {
+      printf ("Out of memory while parsing\n");
+    }
   }
 
   jerry_release_value (res);
 
-  return true;
+  return ret;
 } /* parse_resource */
 
 /**
@@ -157,6 +178,8 @@ bool js_loop (uint32_t ticknow)
 
   if (!jerry_value_is_function (sysloop_func))
   {
+    jerry_type_t sysloop_type = jerry_value_get_type (sysloop_func);
+    printf ("sysloop_type: %d\n", sysloop_type);
     printf ("Error: '%s' is not a function!!!\r\n", fn_sys_loop_name);
     jerry_release_value (sysloop_func);
     jerry_release_value (global_obj_val);

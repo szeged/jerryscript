@@ -20,19 +20,6 @@ USBDEVICE  ?= /dev/ttyUSB0
 JERRYDEBUGGER  ?= OFF
 JERRYHEAP  ?= 20
 REDIRECT_STDOUT  ?= OFF
-ESPTOOL    ?= $(ESPTOOL_PATH)/esptool.py
-
-# compile flags
-ESP_CFLAGS := -D__TARGET_ESP8266 -D__attr_always_inline___=
-
-MFORCE32 = $(shell xtensa-lx106-elf-gcc --help=target | grep mforce-l32)
-
-ifneq ($(MFORCE32),)
-    # Your compiler supports the -mforce-l32 flag which means that
-    # constants can be placed in ROM to free additional RAM
-    ESP_CFLAGS += -DJERRY_CONST_DATA="__attribute__((aligned(4))) __attribute__((section(\".irom.text\")))"
-    ESP_CFLAGS += -mforce-l32
-endif
 
 ESP_CFLAGS := -DJERRY_CONST_DATA='__attribute__((section(\".irom0.literal\")))'
 ESP_CFLAGS += -Wl,-EL -fno-inline-functions
@@ -60,12 +47,13 @@ jerry:
 	 -DCMAKE_C_COMPILER_WORKS=TRUE \
 	 -DENABLE_LTO=OFF \
 	 -DENABLE_ALL_IN_ONE=ON \
-	 -DFEATURE_ERROR_MESSAGES=OFF	\
+	 -DFEATURE_ERROR_MESSAGES=ON	\
+	 -DFEATURE_LOGGING=ON \
 	 -DFEATURE_SYSTEM_ALLOCATOR=ON \
 	 -DFEATURE_DEBUGGER=$(JERRYDEBUGGER) \
 	 -DFEATURE_PROFILE="esp" \
 	 -DJERRY_CMDLINE=OFF \
-	 -DEXTERNAL_COMPILE_FLAGS="$(ESP_CFLAGS)" \
+	 -DEXTERNAL_COMPILE_FLAGS="$(ESP_CFLAGS) $(LWIP_INLCUDE)" \
 	 -DMEM_HEAP_SIZE_KB=$(JERRYHEAP)
 
 	make -C$(BUILD_DIRECTORY) jerry-core jerry-libm

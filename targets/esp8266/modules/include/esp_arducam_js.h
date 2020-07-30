@@ -16,8 +16,50 @@
 #define ARDUCAM_INIT            "init"
 #define ARDUCAM_CAPTURE         "capture"
 #define ARDUCAM_STORE           "store"
-#define ARDUCAM_PRINT           "print"
+#define ARDUCAM_PRINT           "_print"
 #define ARDUCAM_SD_CS           "SD_CS"
+#define ARDUCAM_SET_IMAGE_SIZE  "setImageSize"
+
+#define ARDUCAM_EMPTY_SIZE_PROP_NAME "IMG_SIZE_EMPTY"
+#define ARDUCAM_320x240_PROP_NAME "IMG_SIZE_320x240"
+#define ARDUCAM_640x480_PROP_NAME "IMG_SIZE_640x480"
+#define ARDUCAM_1024x768_PROP_NAME "IMG_SIZE_1024x768"
+#define ARDUCAM_1280x960_PROP_NAME "IMG_SIZE_1280x960"
+#define ARDUCAM_1600x1200_PROP_NAME "IMG_SIZE_1600x1200"
+#define ARDUCAM_1920x1080_PROP_NAME "IMG_SIZE_1920x1080"
+#define ARDUCAM_2048x1536_PROP_NAME "IMG_SIZE_2048x1536"
+#define ARDUCAM_2592x1944_PROP_NAME "IMG_SIZE_2592x1944"
+
+// Type definitions and helpers
+typedef enum arducam_image_size {
+  EMPTY = 0,
+  OV5642_320x240,
+  OV5642_640x480,
+  OV5642_1024x768,
+  OV5642_1280x960,
+  OV5642_1600x1200,
+  OV5642_1920x1080,
+  OV5642_2048x1536,
+  OV5642_2592x1944,
+} arducam_image_size;
+
+typedef enum arducam_init_error_t {
+  ARDUCAM_INIT_OK,
+  ARDUCAM_INIT_SPI_INIT_FAILED,
+  ARDUCAM_INIT_I2C_INIT_FAILED,
+  ARDUCAM_INIT_SPI_INTERFACE_ERROR,
+  ARDUCAM_INIT_I2C_INTERFACE_ERROR,
+} arducam_init_error_t;
+
+
+typedef enum arducam_capture_error_t {
+  ARDUCAM_CAPTURE_OK,
+  ARDUCAM_CAPTURE_OVER_SIZE,
+  ARDUCAM_CAPTURE_SIZE_ZERO
+} arducam_capture_error_t;
+
+arducam_init_error_t _arducam_init();
+arducam_capture_error_t _arducam_capture();
 
 #define ARDUCAM_BUFF_SIZE              128
 
@@ -60,13 +102,7 @@
 // SPI control
 #define SPI_BUS                         1
 #define CAMERA_CS                       2
-#define SD_CS                           16
-
-#define cbi(reg, bitmask) gpio_write(bitmask, 0)
-#define sbi(reg, bitmask) gpio_write(bitmask, 1)
-
-#define regtype volatile uint32_t
-#define regsize uint32_t
+#define SD_CS                           0
 
 #define spi_cs_low(PIN)                   do { gpio_write (PIN, false); } while (0)
 #define spi_cs_high(PIN)                  do { gpio_write (PIN, true); } while (0)
@@ -79,18 +115,7 @@
 #define I2C_SLAVE_ADDR_WRITE           0x78
 #define I2C_SLAVE_ADDR_READ            0x79
 
-// Declarations of helpers etc.
-enum image_size {
-  OV5642_320x240,
-  OV5642_640x480,
-  OV5642_1024x768,
-  OV5642_1280x960,
-  OV5642_1600x1200,
-  OV5642_2048x1536,
-  OV5642_2592x1944,
-  OV5642_1920x1080,
-};
-
+// I2C and SPI low level functions
 void wait (uint32_t timeout);
 uint8_t read_reg (uint8_t pin, uint8_t address);
 void write_reg (uint8_t pin, uint8_t address, uint8_t value);
@@ -102,21 +127,7 @@ void wr_sensor_reg_16_8 (uint16_t regID, uint8_t regDat);
 void wr_sensor_regs_16_8 (const struct sensor_reg reglist[]);
 uint8_t rd_sensor_reg_16_8 (uint16_t regID);
 void init_cam ();
-void set_image_size (enum image_size size);
-
-// WIFI control
-typedef struct netconn* netconn_t;
-
-#define MAX_CONNECT_ATTEMPTS 100
-
-#define ARDUCAM_LIVE_WIFI_SSID ""
-#define ARDUCAM_LIVE_WIFI_PWD ""
-#define ARDUCAM_LIVE_SERVER_ADDR ""
-#define ARDUCAM_LIVE_SERVER_PORT 5010
-
-bool initialize_connection_wrapper (netconn_t* conn_p);
-bool send_picture (netconn_t conn);
-
+void set_image_size (enum arducam_image_size size);
 
 void register_arducam_object (jerry_value_t global_object);
 

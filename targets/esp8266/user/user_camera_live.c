@@ -42,6 +42,7 @@ bool initialize_connection (netconn_t *conn_p)
 
   if (conn == NULL)
   {
+    printf ("netconn_new failed\n");
     return false;
   }
 
@@ -50,6 +51,7 @@ bool initialize_connection (netconn_t *conn_p)
 
   if (err != ERR_OK)
   {
+    printf("Could not find host %s\n", LIVE_SERVER_ADDR);
     netconn_delete (conn);
     return false;
   }
@@ -58,6 +60,7 @@ bool initialize_connection (netconn_t *conn_p)
 
   if (err != ERR_OK)
   {
+    printf("Could not connect to host %s on port %d\n", LIVE_SERVER_ADDR, LIVE_SERVER_PORT);
     netconn_delete (conn);
     return false;
   }

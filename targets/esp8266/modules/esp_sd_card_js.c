@@ -472,8 +472,19 @@ DELCARE_HANDLER (sd_write)
       ret_val = terminte_if_fail (f_write (file_p, work_buffer, (UINT) offset, &written),
                                   &buffer, SD_CARD_WRITE);
 
+      if (jerry_value_is_error (ret_val))
+      {
+        break;
+      }
+
       byteOffset += offset;
       bytes_to_write -= offset;
+    }
+
+    if (!jerry_value_is_error (ret_val))
+    {
+      // If there was an error, the buffer already got released by terminte_if_fail ().
+      jerry_release_value (buffer);
     }
   }
   else

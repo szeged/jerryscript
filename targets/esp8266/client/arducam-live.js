@@ -11,14 +11,6 @@ class ImageProcesser {
     this._startDate = null;
   }
 
-  // set imageSize(data) {
-  //   this._imageSize = parseInt(data.toString(), 16);
-  //   if (this._startDate === null) {
-  //     this._startDate = new Date();
-  //   }
-  //   console.log ("image size: " + this._imageSize);
-  // }
-
   jpegEndReceived() {
     var final_buff = this._imageBufferData[this._imageBufferData.length - 1];
     return final_buff[final_buff.length - 2] == 0xff && final_buff[final_buff.length - 1] == 0xd9;
@@ -28,9 +20,7 @@ class ImageProcesser {
     if (this._startDate === null) {
       this._startDate = new Date();
     }
-    // if (this._imageSize == 0) {
-    //   throw Error('Missing imageSize');
-    // }
+
     this._imageBufferData[0] = data;
 
     if (this.jpegEndReceived()) {
@@ -54,11 +44,6 @@ class ImageProcesser {
     if (this.jpegEndReceived()) {
       this.processImage();
     }
-
-    // if (this._onGoingDataSize > this._imageSize) {
-    //   console.log('err');
-    //   this.reset();
-    // }
   }
 
   idString(size) {
@@ -108,7 +93,7 @@ var server = net.createServer(function(socket) {
     console.log('[ERROR] ' + err + ' on client_ID: ' + socket.id);
     socket.end();
   });
-}).listen(5010);
+}).listen(5011);
 
 const messageType = {
   imageSize : 0,
@@ -124,10 +109,6 @@ function parseData(imageProcesser, data, socket) {
   }
 
   switch (data[0]) {
-    // case messageType.imageSize: {
-    //   imageProcesser.imageSize = data.slice(1);
-    //   break;
-    // }
     case messageType.closeConnection: {
       socket.end();
       console.log ('socket closed');
@@ -139,10 +120,6 @@ function parseData(imageProcesser, data, socket) {
       imageProcesser.imageBuffer = data.slice(1);
       break;
     }
-    // case messageType.imageFragment: {
-    //   imageProcesser._arducamOnGoingDataSend = true;
-    //   break;
-    // }
     default: {
       throw Error ('Unexpected message');
     }

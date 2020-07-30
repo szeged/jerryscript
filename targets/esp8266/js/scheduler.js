@@ -26,7 +26,10 @@ function scheduler(){
     }
     print ("TimeStamp " + this.actualDate.getTime());
   } else {
-    this.configObj = { get_interval : 1000 * 60 * 5, // 5 min
+    this.configObj = {
+                      camera_type : "ArduCAM",
+                      image_size: 1,
+                      get_interval : 1000 * 60 * 5, // 5 min
                       pic_interval : 1000 * 30, // 30 sec
                       measure_interval : 1000 * 30, // 30 sec
                       data_send_interval : 1000 * 60 * 10, // 10 min

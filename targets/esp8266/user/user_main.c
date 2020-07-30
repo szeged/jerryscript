@@ -48,15 +48,27 @@
 static uint32_t camera_live_timeout = 0;
 
 /**
- * Start Camera Live in a task
+ * Start uCam Live in a task
  */
 static void ucam_live_task (void *pvParameters)
 {
   if (!user_ucam_live (camera_live_timeout)) {
-    printf("Camera Task failed\n");
+    printf("uCam Camera Task failed\n");
   }
   sdk_system_restart ();
-} /* camera_task */
+} /* ucam_live_task */
+
+/**
+ * Start ArduCAM live in a task
+ */
+static void arducam_live_task (void *pvParameters)
+{
+  if (!user_arducam_live (camera_live_timeout))
+  {
+    printf ("ArduCAM Camera Task failed\n");
+  }
+  sdk_system_restart ();
+} /* arducam_live_task */
 
 /**
  * Start JerryScript in a task
@@ -109,6 +121,11 @@ ssize_t _write_stdout_r (struct _reent *r, int fd, const void *ptr, size_t len)
 }
 #endif
 
+#define CAM_TYPE_BUF_SIZE 16
+#define CAM_TYPE_ARDUCAM  "ArduCAM"
+#define CAM_TYPE_UCAM     "uCam-III"
+static char cam_type[CAM_TYPE_BUF_SIZE];
+
 static bool check_camera_live ()
 {
   esp_spiffs_init();
@@ -135,14 +152,14 @@ static bool check_camera_live ()
     }
   }
 
-  spiffs_file fd = SPIFFS_open (&fs, "live.txt", SPIFFS_O_RDONLY | SPIFFS_O_WRONLY, 0);
+  spiffs_file live_fd = SPIFFS_open (&fs, "live.txt", SPIFFS_O_RDONLY | SPIFFS_O_WRONLY, 0);
 
   bool ret_value = false;
-  if (!(fd < 0))
+  if (!(live_fd < 0))
   {
     const int buf_size = 0xFF;
     uint8_t buf[buf_size];
-    spiffs_file read_bytes = SPIFFS_read (&fs, fd, buf, buf_size);
+    spiffs_file read_bytes = SPIFFS_read (&fs, live_fd, buf, buf_size);
     printf("Read %d bytes\n", read_bytes);
     if (!(read_bytes < 0))
     {
@@ -151,13 +168,34 @@ static bool check_camera_live ()
       printf("Data: %s time: %d\n", buf, camera_live_timeout);
       ret_value = true;
 
-      close(fd);
+      close(live_fd);
       SPIFFS_remove(&fs, "live.txt");
     }
   }
   else {
-    printf("NO file\n");
+    printf("live.txt not found\n");
   }
+
+  spiffs_file cam_fd = SPIFFS_open (&fs, "cam.txt", SPIFFS_O_RDONLY | SPIFFS_O_WRONLY, 0);
+  if (!(cam_fd < 0))
+  {
+    spiffs_file read_bytes = SPIFFS_read (&fs, cam_fd, cam_type, CAM_TYPE_BUF_SIZE);
+    printf("Read %d bytes\n", read_bytes);
+    if (!(read_bytes < 0))
+    {
+      cam_type[read_bytes] = '\0';    // zero terminate string
+      ret_value = true;
+
+      close(cam_fd);
+      SPIFFS_remove(&fs, "cam.txt");
+    }
+  }
+  else
+  {
+    printf("cam.txt not found\n");
+  }
+
+
   SPIFFS_unmount(&fs);
   esp_spiffs_deinit();
 
@@ -274,8 +312,21 @@ void user_init (void)
 
   if (check_camera_live ())
   {
-    // TODO in check_camera_live, check for arducam, and create the task accordingly
-    xReturned = xTaskCreate (ucam_live_task, "ucam_live", 1280, NULL, 2, &xHandle);
+    if (!strcmp (cam_type, CAM_TYPE_UCAM))
+    {
+      printf ("uCam-III live task\n");
+      xReturned = xTaskCreate (ucam_live_task, "ucam_live", 1280, NULL, 2, &xHandle);
+    }
+    else if (!strcmp (cam_type, CAM_TYPE_ARDUCAM))
+    {
+      printf ("ArduCAM live task\n");
+      xReturned = xTaskCreate (arducam_live_task, "arducam_live", 1280, NULL, 2, &xHandle);
+    }
+    else
+    {
+      printf ("Invalid camera type\n");
+      while (true) {};
+    }
   }
   else
   {

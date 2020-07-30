@@ -46,7 +46,7 @@ bool send_image_buffer(uint8_t *data_p, uint32_t size, netconn_t conn);
 
 #define LIVE_WIFI_SSID "ESP8266"
 #define LIVE_WIFI_PWD "Barackospite"
-#define LIVE_SERVER_ADDR "10.109.183.100"
-#define LIVE_SERVER_PORT 5010
+#define LIVE_SERVER_ADDR "10.109.169.1"
+#define LIVE_SERVER_PORT 5011
 
 #endif
