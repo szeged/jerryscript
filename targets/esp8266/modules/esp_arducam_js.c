@@ -535,8 +535,6 @@ DELCARE_HANDLER (arducam_store)
         number_arducam_buff_size
       };
 
-      printf("writing %d bytes to SD card\n", ARDUCAM_BUFF_SIZE);
-
       spi_cs_low (SD_CS);
       DO_WRITE ();
       spi_cs_high (SD_CS);
@@ -557,8 +555,6 @@ DELCARE_HANDLER (arducam_store)
       as_binary,
       buf_size
     };
-
-    printf("writing %d bytes to SD card\n", ARDUCAM_BUFF_SIZE);
 
     spi_cs_low (SD_CS);
     DO_WRITE();

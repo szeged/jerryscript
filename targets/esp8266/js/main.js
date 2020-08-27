@@ -161,6 +161,7 @@ function configUpdateTask(timestamp, jsref) {
       WIFI.post (serverIp, 8001, "camera_live_interval=0&camera_live_interval_unit=hour");
       live(ref.configObj.camera_live_interval / 1000, ref);
     }
+    initTasks(jsref);
     ref.actualDate = new Date();
   });
 }
@@ -257,7 +258,7 @@ function initTasks (jsref){
     }
     case "ArduCAM": {
       ref.addTask(arducamTask, ref.configObj.pic_interval);
-      // ref.addTask(configUpdateTask, ref.configObj.get_interval);
+      ref.addTask(configUpdateTask, ref.configObj.get_interval);
       break;
     }
     default: {
@@ -274,39 +275,3 @@ if (!defaultConfig){
 function sysloop(ticknow) {
   espScheduler.nextTask();
 };
-
-// var arducamImageSizes = [
-//   ArduCAM.EMPTY,
-//   ArduCAM.IMG_SIZE_320x240,
-//   ArduCAM.IMG_SIZE_640x480,
-//   ArduCAM.IMG_SIZE_1024x768,
-//   ArduCAM.IMG_SIZE_1280x960,
-//   ArduCAM.IMG_SIZE_1600x1200,
-//   ArduCAM.IMG_SIZE_1920x1080,
-//   ArduCAM.IMG_SIZE_2048x1536,
-//   ArduCAM.IMG_SIZE_2592x1944
-// ];
-
-// try {
-//   ArduCAM.init ();
-//   SD.mount (ArduCAM.SD_CS);
-// } catch (e) {
-//   print(e)
-// }
-
-// var i = 1;
-
-// function sysloop(ticknow) {
-//   try {
-//     ArduCAM.setImageSize (arducamImageSizes[i]);
-//     ArduCAM.capture ();
-//     // ArduCAM._print ();
-//     // print ("");
-//     var fd = SD.open("temp" + (i++) + ".jpg", SD.createEmptyForWrite);
-//     ArduCAM.store (fd);
-//     SD.close (fd);
-//     // SD.unmount ();
-//   } catch (e) {
-//     print (e)
-//   }
-// }

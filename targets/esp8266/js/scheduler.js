@@ -77,7 +77,8 @@ scheduler.prototype._currentTimestamp = function () {
     date = new Date();
     this.actualDate = date;
   } else {
-    date = this.actualDate;
+    // date = this.actualDate;
+    date = new Date(DELAY.systemTime());
   }
   var date_str = date.toDateString() + "_" +  date.toTimeString();
   return date_str.replace(/-/g, '_').replace(/:/g, '_').replace(/\./g, '_');

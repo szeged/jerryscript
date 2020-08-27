@@ -4,7 +4,7 @@
 static uint8_t *image_buffer_start;
 static uint8_t *image_buffer;
 static uint32_t image_size = 0;
-static uint32_t buf_size = ARDUCAM_BUFF_SIZE;
+static uint32_t buf_size = 512;
 
 static netconn_t conn;
 
@@ -35,8 +35,7 @@ bool send_picture ()
 
     if (image_pos % buf_size == 0)
     {
-      printf ("send_picture: image_pos: %d\n", image_pos);
-      vTaskDelay(100 / portTICK_PERIOD_MS);
+      vTaskDelay(45 / portTICK_PERIOD_MS);
       if (!send_image_buffer (image_buffer_start, buf_size, conn))
       {
         printf ("could not send image fragment (main loop)\n");
@@ -57,12 +56,6 @@ bool send_picture ()
   }
 
   free (image_buffer_start);
-  vTaskDelay (1000 / portTICK_PERIOD_MS);
-  if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
-  {
-    printf ("could not send close connection message\n");
-  }
-  close_connection (conn);
 
   return ret;
 }
@@ -113,6 +106,11 @@ bool user_arducam_live(uint32_t timeout)
     ret = false;
   }
 
+  vTaskDelay (1000 / portTICK_PERIOD_MS);
+  if (!send_close_connection (conn, MSG_TYPE_CLOSE_CONN))
+  {
+    printf ("could not send close connection message\n");
+  }
   close_connection (conn);
   return ret;
 }
