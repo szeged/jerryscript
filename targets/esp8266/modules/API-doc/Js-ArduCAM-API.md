@@ -27,6 +27,8 @@ Note that the SD card reader also uses the SPI interface. The two devices can sh
 | D2 (GPIO4) | SCL |  |
 | D1 (GPIO5) | SDA |  |
 
+D1, D2, D3 and D4 pins can be configured freely. To change the above functions to your custom configuration, you need to change the `I2C_SDA_PIN`, `I2C_SCL_PIN`, `CAMERA_CS` and `SD_CS` values in `modules/include/esp_arducam_js.h`.
+
 ## Constants
 
 ### ArduCAM.SD_CS
@@ -49,7 +51,7 @@ Image sizes are represented by constants according to this table:
 | 2048x1536 | `ArduCAM.IMG_SIZE_2048x1536` |
 | 2592x1944 | `ArduCAM.IMG_SIZE_2592x1944` |
 
-Note: the `EMPTY` image size exists to keep compatibility with the uCam device.
+**Note**: the `EMPTY` image size exists to keep compatibility with the uCam device. In the case of ArduCAM, this will fallback to 320x240.
 
 ## Methods
 
@@ -75,7 +77,7 @@ try {
 
   Sets the internal `image_size` variable of the module (otherwise unreachable from Javascript code).
 
-**Note**: this will not communicate with the device in any way. The actual configuration of the image size the camera will take will happen directly before capturing.
+**Note**: this will not communicate with the device in any way. The actual configuration of the camera's image size take will happen directly before capturing.
 
 **Example**
 
@@ -105,7 +107,7 @@ try {
 
   Configures the device image size through the I2C interface, then gives the device the command to take a picture.
 
-  **Note**: the camera must be initialized before capturing. It is also recommended to call `ArduCAM.setImageSize()`, otherwise the low level implementation will default to `320x240`.
+**Note**: the camera must be initialized before capturing. It is also recommended to call `ArduCAM.setImageSize()`, otherwise the low level implementation will default to `320x240`.
 
 **Example**
 
@@ -138,7 +140,7 @@ try {
 
   Reads the image from the camera's storage and saves it to the SD card.
 
-**Note**: The camera and the reader will need to share the same SPI interface as shown above.
+**Note**: The camera and the reader will need to share the same SPI interface as shown at the top of this document.
 
 **Example**
 
