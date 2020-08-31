@@ -40,9 +40,8 @@ var image_size_map = {
   "1024x768": 3,
   "1280x960": 4,
   "1600x1200": 5,
-  "1920x1080": 6,
-  "2048x1536": 7,
-  "2592x1944": 8
+  "2048x1536": 6,
+  "2592x1944": 7
 }
 
 var default_value = JSON.stringify ({
@@ -227,7 +226,6 @@ http.createServer(function (request, response) {
                     '<option>1024x768</option>' +
                     '<option>1280x960</option>' +
                     '<option>1600x1200</option>' +
-                    '<option>1920x1080</option>' +
                     '<option>2048x1536</option>' +
                     '<option>2592x1944</option>' +
                   '</select>' +

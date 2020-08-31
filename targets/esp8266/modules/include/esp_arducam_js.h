@@ -38,7 +38,6 @@ typedef enum arducam_image_size {
   OV5642_1024x768,
   OV5642_1280x960,
   OV5642_1600x1200,
-  OV5642_1920x1080,
   OV5642_2048x1536,
   OV5642_2592x1944,
 } arducam_image_size;

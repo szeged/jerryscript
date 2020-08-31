@@ -592,7 +592,6 @@ void register_arducam_object (jerry_value_t global_object)
   register_number_to_object (ARDUCAM_1024x768_PROP_NAME, OV5642_1024x768, arducam_object);
   register_number_to_object (ARDUCAM_1280x960_PROP_NAME, OV5642_1280x960, arducam_object);
   register_number_to_object (ARDUCAM_1600x1200_PROP_NAME, OV5642_1600x1200, arducam_object);
-  register_number_to_object (ARDUCAM_1920x1080_PROP_NAME, OV5642_1920x1080, arducam_object);
   register_number_to_object (ARDUCAM_2048x1536_PROP_NAME, OV5642_2048x1536, arducam_object);
   register_number_to_object (ARDUCAM_2592x1944_PROP_NAME, OV5642_2592x1944, arducam_object);
 
